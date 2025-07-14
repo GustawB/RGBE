@@ -4,9 +4,18 @@ use crate::types::*;
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    let reg: &mut Value = &console.registers[RegSize::Word(r16)];
+    let reg: &mut Value = &mut console.registers[RegSize::Word(r16)];
     match reg {
-        Value::Word(r) => *r = imm16,
+        Value::Word(r) => **r = imm16,
+        _ => panic!("Invalid register size returned"),
+    }
+}
+
+fn ld_r16mem_a(r16: u8, console: &mut Console) {
+    let dest_reg: &Value = &console.registers[RegSize::Word(r16)];
+    let a_reg: &Value = &console.registers[RegSize::Byte(7)];
+    match dest_reg {
+        Value::Word(r) => **r = imm16,
         _ => panic!("Invalid register size returned"),
     }
 }

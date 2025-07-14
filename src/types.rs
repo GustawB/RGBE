@@ -2,15 +2,16 @@ use std::fs::File;
 use std::io::{Read, Result, Seek, SeekFrom};
 use crate::{block_zero, constants::*};
 use std::ops::{Index, IndexMut};
+use std::marker::{self, PhantomData};
 
-pub struct Console {
+pub struct Console<'c> {
     addrBus: [i8; ADDR_BUS_SIZE],
     executable: File,
-    pub registers: Registers,
+    pub registers: Registers<'c>,
 }
 
-impl Console {
-    pub fn init(executable: File) -> Console {
+impl<'c> Console<'c> {
+    pub fn init(executable: File) -> Console<'c> {
         Console { 
             addrBus: [0; ADDR_BUS_SIZE],
             executable: executable,
@@ -38,9 +39,10 @@ impl Console {
         else {
             Ok (match bt >> 6 {
                 0 => block_zero::dispatch(bt, self),
-                1=>
-                2=>
-                3=>
+                1=> unimplemented!(),
+                2=> unimplemented!(),
+                3=> unimplemented!(),
+                _ => panic!("Invalid instruction"),
             })
         }
     }
@@ -52,27 +54,28 @@ impl Console {
     }
 }
 
-pub struct  Registers {
-    pub AF: [i8; 2],
+pub struct Registers<'r> {
+    AF: [i8; 2],
     BC: [i8; 2],
     DE: [i8; 2],
     HL: [i8; 2],
     SP: [i8; 2],
     PC: [i8; 2],
+    _marker: marker::PhantomData<&'r u8>,
 }
 
-pub enum Value {
-    Byte(u8),
-    Word(u16),
+pub enum Value<'v> {
+    Byte(&'v mut u8),
+    Word(&'v mut u16),
 }
 
-pub enum RegSize{
+pub enum RegSize {
     Byte(u8),
     Word(u8),
 }
 
-impl Registers {
-    pub fn init() -> Registers {
+impl<'r> Registers<'r> {
+    pub fn init() -> Registers<'r> {
         Registers {
             AF: [0, 0],
             BC: [0, 0],
@@ -80,6 +83,7 @@ impl Registers {
             HL: [0, 0],
             SP: [0, 0],
             PC: [0, 0],
+            _marker: PhantomData
         }
     }
 
@@ -133,13 +137,22 @@ impl Registers {
     }
 }
 
-impl Index<RegSize> for Registers {
-    type Output = Value;
+impl<'a> Index<RegSize> for Registers<'a> {
+    type Output = Value<'a>;
 
     fn index(&self, index: RegSize) -> &Self::Output {
         match index {
-            RegSize::Byte(i) => &Value::Byte(0),
-            RegSize::Word(i) => &Value::Byte(1),
+            RegSize::Byte(i) => unimplemented!(),
+            RegSize::Word(i) => unimplemented!(),
+        }
+    }
+}
+
+impl<'a> IndexMut<RegSize> for Registers<'a> {
+    fn index_mut(&mut self, index: RegSize) -> &mut Self::Output {
+        match index {
+            RegSize::Byte(i) => unimplemented!(),
+            RegSize::Word(i) => unimplemented!(),
         }
     }
 }
