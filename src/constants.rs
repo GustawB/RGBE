@@ -1,0 +1,1 @@
+pub const ADDR_BUS_SIZE: usize = 65535;
