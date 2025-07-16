@@ -5,7 +5,7 @@ use std::ops::{Index, IndexMut};
 use std::marker::{self, PhantomData};
 
 pub struct Console<'c> {
-    addrBus: [i8; ADDR_BUS_SIZE],
+    pub addrBus: [u8; ADDR_BUS_SIZE],
     executable: File,
     pub registers: Registers<'c>,
 }
