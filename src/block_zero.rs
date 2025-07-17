@@ -65,7 +65,18 @@ fn dec_r16(r16: u8, console: &mut Console) {
 }
 
 fn add_hl_r16(r16: u8, console: &mut Console) {
-    // TODO
+    let src_val: u16;
+    {
+        let src_reg: &Value = &console.registers[RegSize::Word(r16)];
+        match src_reg {
+            Value::Word(r) => src_val = **r,
+            _ => panic!("Invalid register size returned"),
+        }
+    }
+    let hl_reg: &mut Value = &mut console.registers[RegSize::Word(HL)];
+    match hl_reg {
+        Value::Word(hl) => (**hl) += src_val,
+    }
 }
 
 fn inc_r8(r8: u8, console: &mut Console) {
@@ -83,6 +94,17 @@ fn dec_r8(r8: u8, console: &mut Console) {
         _ => panic!("Invalid register size returned"),
     }
 }
+
+fn ld_r8_imm8(r8: u8, console: &mut Console) {
+    let imm8: u8 = console.fetch_byte();
+    let reg: &mut Value = &mut console.registers[RegSize::Byte(r8)];
+    match reg {
+        Value::Byte(r) => **r = imm8,
+        _ => panic!("Invalid register size returned"),
+    }
+}
+
+fn rlca()
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {
     if instr << 4 == 1 {
