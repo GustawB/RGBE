@@ -99,6 +99,7 @@ impl<'r> Registers<'r> {
                 5 => self.HL.as_mut_ptr().add(1),
                 6 => panic!("Unimplemented"),
                 7 => self.AF.as_mut_ptr(),
+                8 => self.AF.as_mut_ptr().add(1),
                 _ => panic!("Index out of range")
             };
             res = &mut *ptr;
