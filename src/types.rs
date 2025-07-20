@@ -136,6 +136,18 @@ impl<'r> Registers<'r> {
         }
         res
     }
+
+    pub fn is_flag_set(&self, flag: u8) -> bool {
+        (self.AF[1] & (flag as i8)) != 0
+    }
+
+    pub fn set_flag(&mut self, flag: u8) {
+        self.AF[1] = self.AF[1] | (flag as i8);
+    }
+
+    pub fn clear_flag(&mut self, flag: u8) {
+        self.AF[1] = self.AF[1] & (!(flag as i8));
+    }
 }
 
 impl<'a> Index<RegSize> for Registers<'a> {
