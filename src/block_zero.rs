@@ -105,8 +105,106 @@ fn ld_r8_imm8(r8: u8, console: &mut Console) {
     match_value!(reg, Value::Byte(r) => { **r = imm8; })
 }
 
-fn rlca() {
-    
+fn rlca(console: &mut Console) {
+    console.registers.clear_flag(Z);
+    console.registers.clear_flag(N);
+    console.registers.clear_flag(H);
+    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
+    let mut leftmost_bit: u8 = 0;
+    match_value!(a_reg, Value::Byte(r) => {
+        leftmost_bit = **r >> 7;
+        **r = (**r << 1) | leftmost_bit;
+    });
+    if leftmost_bit == 0 {
+        console.registers.clear_flag(C);
+    }
+    else {
+        console.registers.set_flag(C);
+    }
+}
+
+fn rrca(console: &mut Console) {
+    console.registers.clear_flag(Z);
+    console.registers.clear_flag(N);
+    console.registers.clear_flag(H);
+    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
+    let rightmost_bit: u8;
+    match_value!(a_reg, Value::Byte(r) => {
+        rightmost_bit = **r << 7;
+        **r = (**r >> 1) | (rightmost_bit << 7);
+    });
+    if rightmost_bit == 0 {
+        console.registers.clear_flag(C);
+    }
+    else {
+        console.registers.set_flag(C);
+    }
+}
+
+fn rla(console: &mut Console) {
+    console.registers.clear_flag(Z);
+    console.registers.clear_flag(N);
+    console.registers.clear_flag(H);
+    let c_bit = if console.registers.is_flag_set(C) {1} else {0}; 
+    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
+    let leftmost_bit: u8;
+    match_value!(a_reg, Value::Byte(r) => {
+        leftmost_bit = **r >> 7;
+        **r = (**r << 1) | c_bit;
+    });
+    if leftmost_bit == 0 {
+        console.registers.clear_flag(C);
+    }
+    else {
+        console.registers.set_flag(C);
+    }
+}
+
+fn rra(console: &mut Console) {
+    console.registers.clear_flag(Z);
+    console.registers.clear_flag(N);
+    console.registers.clear_flag(H);
+    let c_bit = if console.registers.is_flag_set(C) {1} else {0}; 
+    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
+    let rightmost_bit: u8;
+    match_value!(a_reg, Value::Byte(r) => {
+        rightmost_bit = **r << 7;
+        **r = (**r >> 1) | (c_bit << 7);
+    });
+    if rightmost_bit == 0 {
+        console.registers.clear_flag(C);
+    }
+    else {
+        console.registers.set_flag(C);
+    }
+}
+
+fn daa(console: &mut Console) {
+    let mut adjustment: u8 = 0;
+    let h_flag: bool = console.registers.is_flag_set(H);
+    let c_flag: bool = console.registers.is_flag_set(C);
+    let n_flag: bool = console.registers.is_flag_set(N);
+     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
+    if n_flag {
+        if h_flag {
+            adjustment += 0x6;
+        }
+        if c_flag {
+            adjustment += 0x60;
+        }
+        match_value!(a_reg, Value::Byte(r) => { **r -= adjustment; });
+    }
+    else {
+        match_value!(a_reg, Value::Byte(r) => {
+            if h_flag || (**r & 0xF) > 0x9 {
+                adjustment += 0x6;
+            }
+            if c_flag || **r > 0x99 {
+                adjustment += 0x60;
+            }
+            **r += adjustment;
+        });
+    }
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {
