@@ -1,5 +1,5 @@
 use macros::match_value;
-use crate::{constants::*, types::*};
+use crate::{bit_ops::{carry, half_carry}, constants::*, types::*};
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
@@ -47,44 +47,44 @@ fn dec_r16(r16: u8, console: &mut Console) {
 }
 
 fn add_hl_r16(r16: u8, console: &mut Console) {
-    let prev_val: u16;
-    let src_val: u16;
+    let base: u16;
+    let addend: u16;
     {
         let src_reg: &Value = &console.registers[RegSize::Word(r16)];
-        match_value!(src_reg, Value::Word(r) => { src_val = **r; });
+        match_value!(src_reg, Value::Word(r) => { addend = **r; });
     }
     let hl_reg: &mut Value = &mut console.registers[RegSize::Word(HL)];
     match_value!(hl_reg, Value::Word(hl) => {
-        prev_val = **hl;
-        (**hl) += src_val;
+        base = **hl;
+        (**hl) += addend;
         console.registers.clear_flag(flag::N);
     });
-    console.registers.clear_or_set_flag(((prev_val & 0x0FFF) + (src_val & 0x0FFF)) & 0x1000 != 0, flag::H);
-    console.registers.clear_or_set_flag(((prev_val as u32) + (src_val as u32)) > 0xFFFF, flag::C);
+    console.registers.clear_or_set_flag(half_carry::add_16(base, addend), flag::H);
+    console.registers.clear_or_set_flag(carry::add_16(base, addend), flag::C);
 }
 
 fn inc_r8(r8: u8, console: &mut Console) {
-    let prev_val: u8;
+    let base: u8;
     let reg: &mut Value = &mut console.registers[RegSize::Word(r8)];
     match_value!(reg, Value::Byte(r) => {
-        prev_val = **r;
+        base = **r;
         (**r) += 1;
-        console.registers.clear_or_set_flag((prev_val + 1) == 0, flag::Z);
+        console.registers.clear_or_set_flag((base + 1) == 0, flag::Z);
         console.registers.clear_flag(flag::N);
     });
-    console.registers.clear_or_set_flag(((prev_val & 0xF) + (1 & 0xF)) & 0x10 != 0, flag::H);
+    console.registers.clear_or_set_flag(half_carry::add_8(base, 1), flag::H);
 }
 
 fn dec_r8(r8: u8, console: &mut Console) {
-    let prev_val: u8;
+    let base: u8;
     let reg: &mut Value = &mut console.registers[RegSize::Word(r8)];
     match_value!(reg, Value::Byte(r) => {
-        prev_val = **r;
+        base = **r;
         (**r) -= 1;
-        console.registers.clear_or_set_flag((prev_val - 1) == 0, flag::Z);
+        console.registers.clear_or_set_flag((base - 1) == 0, flag::Z);
         console.registers.set_flag(flag::N);
     });
-    console.registers.clear_or_set_flag((prev_val & 0x0F) < (1 & 0x0F), flag::H);
+    console.registers.clear_or_set_flag(half_carry::sub_8(base, 1), flag::H);
 }
 
 fn ld_r8_imm8(r8: u8, console: &mut Console) {

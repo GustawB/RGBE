@@ -3,6 +3,7 @@ use std::io::Read;
 use std::fs::File;
 use std::io::BufReader;
 
+mod bit_ops;
 mod constants;
 mod types;
 mod block_zero;
