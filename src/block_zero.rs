@@ -19,10 +19,8 @@ fn ld_r16mem_a(r16: u8, console: &mut Console) {
 
 fn ld_a_r16mm(r16: u8, console: &mut Console) {
     let src_val: u16;
-    {
-        let src_reg: &Value = &console.registers[RegSize::Word(r16)];
-        match_value!(src_reg, Value::Word(r) => { src_val = **r; });
-    }
+    let src_reg: &Value = &console.registers[RegSize::Word(r16)];
+    match_value!(src_reg, Value::Word(r) => { src_val = **r; });
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     match_value!(a_reg, Value::Byte(a) => { **a = console.addrBus[src_val as usize]; })
 }
@@ -49,10 +47,8 @@ fn dec_r16(r16: u8, console: &mut Console) {
 fn add_hl_r16(r16: u8, console: &mut Console) {
     let base: u16;
     let addend: u16;
-    {
-        let src_reg: &Value = &console.registers[RegSize::Word(r16)];
-        match_value!(src_reg, Value::Word(r) => { addend = **r; });
-    }
+    let src_reg: &Value = &console.registers[RegSize::Word(r16)];
+    match_value!(src_reg, Value::Word(r) => { addend = **r; });
     let hl_reg: &mut Value = &mut console.registers[RegSize::Word(HL)];
     match_value!(hl_reg, Value::Word(hl) => {
         base = **hl;

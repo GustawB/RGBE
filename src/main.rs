@@ -8,6 +8,7 @@ mod constants;
 mod types;
 mod block_zero;
 mod block_one;
+mod block_two;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
