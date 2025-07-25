@@ -7,6 +7,7 @@ mod bit_ops;
 mod constants;
 mod types;
 mod block_zero;
+mod block_one;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

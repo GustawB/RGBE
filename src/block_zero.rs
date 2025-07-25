@@ -197,23 +197,55 @@ fn jr_cc_imm8(cc: u8, console: &mut Console) {
 
 fn stop(console: &mut Console) {
     console.fetch_byte();
+    // TODO: implement
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {
+    let op: u8 = (instr << 2) >> 4;
     if instr << 4 == 1 {
-
+        ld_r16_imm16(op, console);
     } else if instr << 4 == 2 {
-
-    } else if instr << 4 == 3 {
-        
-    } else if instr << 4 == 8 {
-        
-    } else if instr << 4 == 9 {
-        
+        ld_r16mem_a(op, console);
     } else if instr << 4 == 10 {
-        
+        ld_a_r16mm(op, console);
+    } else if instr == 8 {
+        ld_imm16_sp(console);
+    } else if instr << 4 == 3 {
+        inc_r16(op, console);
     } else if instr << 4 == 11 {
-        
+        dec_r16(op, console);
+    } else if instr << 4 == 9 {
+        add_hl_r16(op, console);        
+    } else if instr << 3 == 4 {
+        inc_r8(op, console);
+    } else if instr << 3 == 5 {
+        dec_r16(op, console);
+    } else if instr << 3 == 6 {
+        ld_r8_imm8(op, console);
+    } else if instr == 7 {
+        rlca(console);
+    } else if instr == 15 {
+        rrca(console);
+    } else if instr == 23 {
+        rla(console);
+    } else if instr == 31 {
+        rra(console);
+    } else if instr == 39 {
+        daa(console);
+    } else if instr == 47 {
+        cpl(console);
+    } else if instr == 55 {
+        scf(console);
+    } else if instr == 61 {
+        ccf(console);
+    } else if instr == 24 {
+        jr_imm8(console);
+    } else if instr << 5 == 0 && instr >> 5 == 1 {
+        jr_cc_imm8(op, console);
+    } else if instr == 14 {
+        stop(console);
+    } else {
+        panic!("Unrecognized OPCode in block zero.");
     }
     
 }
