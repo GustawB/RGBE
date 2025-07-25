@@ -57,10 +57,10 @@ fn add_hl_r16(r16: u8, console: &mut Console) {
     match_value!(hl_reg, Value::Word(hl) => {
         prev_val = **hl;
         (**hl) += src_val;
-        console.registers.clear_flag(N);
+        console.registers.clear_flag(flag::N);
     });
-    console.registers.clear_or_set_flag(((prev_val & 0x0FFF) + (src_val & 0x0FFF)) & 0x1000 != 0, H);
-    console.registers.clear_or_set_flag(((prev_val as u32) + (src_val as u32)) > 0xFFFF, C);
+    console.registers.clear_or_set_flag(((prev_val & 0x0FFF) + (src_val & 0x0FFF)) & 0x1000 != 0, flag::H);
+    console.registers.clear_or_set_flag(((prev_val as u32) + (src_val as u32)) > 0xFFFF, flag::C);
 }
 
 fn inc_r8(r8: u8, console: &mut Console) {
@@ -69,10 +69,10 @@ fn inc_r8(r8: u8, console: &mut Console) {
     match_value!(reg, Value::Byte(r) => {
         prev_val = **r;
         (**r) += 1;
-        console.registers.clear_or_set_flag((prev_val + 1) == 0, Z);
-        console.registers.clear_flag(N);
+        console.registers.clear_or_set_flag((prev_val + 1) == 0, flag::Z);
+        console.registers.clear_flag(flag::N);
     });
-    console.registers.clear_or_set_flag(((prev_val & 0xF) + (1 & 0xF)) & 0x10 != 0, H);
+    console.registers.clear_or_set_flag(((prev_val & 0xF) + (1 & 0xF)) & 0x10 != 0, flag::H);
 }
 
 fn dec_r8(r8: u8, console: &mut Console) {
@@ -81,10 +81,10 @@ fn dec_r8(r8: u8, console: &mut Console) {
     match_value!(reg, Value::Byte(r) => {
         prev_val = **r;
         (**r) -= 1;
-        console.registers.clear_or_set_flag((prev_val - 1) == 0, Z);
-        console.registers.set_flag(N);
+        console.registers.clear_or_set_flag((prev_val - 1) == 0, flag::Z);
+        console.registers.set_flag(flag::N);
     });
-    console.registers.clear_or_set_flag((prev_val & 0x0F) < (1 & 0x0F), H);
+    console.registers.clear_or_set_flag((prev_val & 0x0F) < (1 & 0x0F), flag::H);
 }
 
 fn ld_r8_imm8(r8: u8, console: &mut Console) {
@@ -94,56 +94,56 @@ fn ld_r8_imm8(r8: u8, console: &mut Console) {
 }
 
 fn rlca(console: &mut Console) {
-    console.registers.clear_flags(&[Z, N, H]);
+    console.registers.clear_flags(&[flag::Z, flag::N, flag::H]);
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     let mut leftmost_bit: u8 = 0;
     match_value!(a_reg, Value::Byte(r) => {
         leftmost_bit = **r >> 7;
         **r = (**r << 1) | leftmost_bit;
     });
-    console.registers.clear_or_set_flag(leftmost_bit == 0, C);
+    console.registers.clear_or_set_flag(leftmost_bit == 0, flag::C);
 }
 
 fn rrca(console: &mut Console) {
-    console.registers.clear_flags(&[Z, N, H]);
+    console.registers.clear_flags(&[flag::Z, flag::N, flag::H]);
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     let rightmost_bit: u8;
     match_value!(a_reg, Value::Byte(r) => {
         rightmost_bit = **r << 7;
         **r = (**r >> 1) | (rightmost_bit << 7);
     });
-    console.registers.clear_or_set_flag(rightmost_bit == 0, C);
+    console.registers.clear_or_set_flag(rightmost_bit == 0, flag::C);
 }
 
 fn rla(console: &mut Console) {
-    console.registers.clear_flags(&[Z, N, H]);
-    let c_bit = if console.registers.is_flag_set(C) {1} else {0}; 
+    console.registers.clear_flags(&[flag::Z, flag::N, flag::H]);
+    let c_bit = if console.registers.is_flag_set(flag::C) {1} else {0}; 
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     let leftmost_bit: u8;
     match_value!(a_reg, Value::Byte(r) => {
         leftmost_bit = **r >> 7;
         **r = (**r << 1) | c_bit;
     });
-    console.registers.clear_or_set_flag(leftmost_bit == 0, C);
+    console.registers.clear_or_set_flag(leftmost_bit == 0, flag::C);
 }
 
 fn rra(console: &mut Console) {
-    console.registers.clear_flags(&[Z, N, H]);
-    let c_bit = if console.registers.is_flag_set(C) {1} else {0}; 
+    console.registers.clear_flags(&[flag::Z, flag::N, flag::H]);
+    let c_bit = if console.registers.is_flag_set(flag::C) {1} else {0}; 
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     let rightmost_bit: u8;
     match_value!(a_reg, Value::Byte(r) => {
         rightmost_bit = **r << 7;
         **r = (**r >> 1) | (c_bit << 7);
     });
-    console.registers.clear_or_set_flag(rightmost_bit == 0, C);
+    console.registers.clear_or_set_flag(rightmost_bit == 0, flag::C);
 }
 
 fn daa(console: &mut Console) {
     let mut adjustment: u8 = 0;
-    let h_flag: bool = console.registers.is_flag_set(H);
-    let c_flag: bool = console.registers.is_flag_set(C);
-    let n_flag: bool = console.registers.is_flag_set(N);
+    let h_flag: bool = console.registers.is_flag_set(flag::H);
+    let c_flag: bool = console.registers.is_flag_set(flag::C);
+    let n_flag: bool = console.registers.is_flag_set(flag::N);
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     if n_flag {
         if h_flag {
@@ -169,23 +169,34 @@ fn daa(console: &mut Console) {
 }
 
 fn cpl(console: &mut Console) {
-    console.registers.set_flags(&[N, H]);
+    console.registers.set_flags(&[flag::N, flag::H]);
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     match_value!(a_reg, Value::Byte(r) => { **r = !(**r); })
 }
 
 fn scf(console: &mut Console) {
-    console.registers.clear_flags(&[N, H]);
-    console.registers.set_flag(C);
+    console.registers.clear_flags(&[flag::N, flag::H]);
+    console.registers.set_flag(flag::C);
 }
 
 fn ccf(console: &mut Console) {
-    console.registers.clear_flags(&[N, H]);
-    console.registers.clear_or_set_flag(!console.registers.is_flag_set(C), C);
+    console.registers.clear_flags(&[flag::N, flag::H]);
+    console.registers.clear_or_set_flag(!console.registers.is_flag_set(flag::C), flag::C);
 }
 
 fn jr_imm8(console: &mut Console) {
-    
+    let imm8: u8 = console.fetch_byte();
+    console.move_pc(imm8 as i16);
+}
+
+fn jr_cc_imm8(cc: u8, console: &mut Console) {
+    if console.registers.is_condition_met(cc) {
+        jr_imm8(console);
+    }
+}
+
+fn stop(console: &mut Console) {
+    console.fetch_byte();
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {

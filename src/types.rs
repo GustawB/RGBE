@@ -31,6 +31,13 @@ impl<'c> Console<'c> {
         ((buf[1] as u16) << 8) | buf[0] as u16 // Little endian garbage
     }
 
+    pub fn move_pc(&mut self, amount: i16) {
+        match self.executable.seek_relative(amount as i64) {
+            Ok(()) => (),
+            Err(..) => panic!("Falied to move program counter."),
+        }
+    }
+
     fn step(&mut self) -> Result<()> {
         let bt = self.fetch_byte();
         if bt == 0xCD {
@@ -169,6 +176,16 @@ impl<'r> Registers<'r> {
             self.clear_flag(flag);
         }
     }
+
+    pub fn is_condition_met(&self, cc: u8) -> bool {
+    match cc {
+        cond::NZ => !self.is_flag_set(flag::Z),
+        cond::Z => self.is_flag_set(flag::Z),
+        cond::NC => !self.is_flag_set(flag::C),
+        cond::C => self.is_flag_set(flag::C),
+        _ => panic!("Invalid flag encountered"), 
+    }
+}
 }
 
 impl<'a> Index<RegSize> for Registers<'a> {
