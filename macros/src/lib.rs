@@ -1,7 +1,7 @@
 extern crate proc_macro;
 use proc_macro::{TokenStream};
-use syn::{parse::{Parse, ParseStream}, parse_macro_input, Block, ExprParen, Ident, Path, Result, Token};
-use quote::quote;
+use syn::{parse::{Parse, ParseStream}, parse_macro_input, Block, ExprParen, Ident, ItemFn, Path, Result, Token};
+use quote::{quote, ToTokens};
 
 struct MakeAnswerInput {
     ident: Ident,
@@ -34,4 +34,21 @@ pub fn match_value(_item: TokenStream) -> TokenStream {
             _ => panic!("Invalid register size returned"),
         }
     }.into()
+}
+
+#[proc_macro_attribute]
+pub fn arg(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let attr_str: &str = &attr.to_string();
+    let mut item_fun: ItemFn = parse_macro_input!(item as ItemFn);
+
+    match attr_str {
+        "r8" => {
+            item_fun.block.stmts.insert(0, syn::parse(quote! { let r8_val: u8; }.into()).unwrap());
+            item_fun.block.stmts.insert(1, syn::parse(quote! { let r8_reg: &Value = &console.registers[RegSize::Byte(r8)]; }.into()).unwrap());
+            item_fun.block.stmts.insert(2, syn::parse(quote! { match_value!(r8_reg, Value::Byte(r) => { r8_val = **r; }); }.into()).unwrap());
+        },
+        _ => (),
+    };
+
+    item_fun.into_token_stream().into()
 }
