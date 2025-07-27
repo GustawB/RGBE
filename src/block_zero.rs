@@ -197,26 +197,26 @@ fn stop(console: &mut Console) {
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {
-    let op: u8 = (instr << 2) >> 4;
-    if instr << 4 == 1 {
+    let op: u8 = (instr << 2) >> 6;
+    if instr & 0x0F == 1 {
         ld_r16_imm16(op, console);
-    } else if instr << 4 == 2 {
+    } else if instr & 0x0F == 2 {
         ld_r16mem_a(op, console);
-    } else if instr << 4 == 10 {
+    } else if instr & 0x0F == 10 {
         ld_a_r16mm(op, console);
     } else if instr == 8 {
         ld_imm16_sp(console);
-    } else if instr << 4 == 3 {
+    } else if instr & 0x0F == 3 {
         inc_r16(op, console);
-    } else if instr << 4 == 11 {
+    } else if instr & 0x0F == 11 {
         dec_r16(op, console);
-    } else if instr << 4 == 9 {
+    } else if instr & 0x0F == 9 {
         add_hl_r16(op, console);        
-    } else if instr << 3 == 4 {
+    } else if instr & 0x07 == 4 {
         inc_r8(op, console);
-    } else if instr << 3 == 5 {
+    } else if instr & 0x07 == 5 {
         dec_r16(op, console);
-    } else if instr << 3 == 6 {
+    } else if instr & 0x07 == 6 {
         ld_r8_imm8(op, console);
     } else if instr == 7 {
         rlca(console);
@@ -236,7 +236,7 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
         ccf(console);
     } else if instr == 24 {
         jr_imm8(console);
-    } else if instr << 5 == 0 && instr >> 5 == 1 {
+    } else if instr & 0x07 == 0 && instr >> 5 == 1 {
         jr_cc_imm8(op, console);
     } else if instr == 14 {
         stop(console);
