@@ -1,6 +1,6 @@
 extern crate proc_macro;
 use proc_macro::{TokenStream};
-use proc_macro2::Span;
+use proc_macro2::{Span};
 use syn::{parse::{Parse, ParseStream}, parse_macro_input, Block, ExprParen, Ident, ItemFn, Path, Result, Token};
 use quote::{quote, ToTokens};
 
@@ -41,18 +41,20 @@ pub fn match_value(_item: TokenStream) -> TokenStream {
 pub fn arg_register(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr_str: &str = &attr.to_string();
     let mut item_fun: ItemFn = parse_macro_input!(item as ItemFn);
-    let permitted: Vec<&str>= vec!["r8", "r16"];
 
-    if !permitted.contains(&attr_str) {
-        panic!("Invalid register parameter. Possible args are: r8; r16")
-    }
-    
-    let val_ident = Ident::new(&format!("{}_val", attr_str), Span::call_site());
-    let reg_ident = Ident::new(&format!("{}_reg", attr_str), Span::call_site());
-    let reg_param_ident = Ident::new(attr_str, Span::call_site());
-    item_fun.block.stmts.insert(0, syn::parse(quote! { let #val_ident: u8; }.into()).unwrap());
-    item_fun.block.stmts.insert(1, syn::parse(quote! { let #reg_ident: &Value = &console.registers[RegSize::Byte(#reg_param_ident)]; }.into()).unwrap());
-    item_fun.block.stmts.insert(2, syn::parse(quote! { match_value!(#reg_ident, Value::Byte(r) => { #val_ident = **r; }); }.into()).unwrap());
+    match attr_str {
+        "r8" => {
+            item_fun.block.stmts.insert(0, syn::parse(quote! { let r8_val: u8; }.into()).unwrap());
+            item_fun.block.stmts.insert(1, syn::parse(quote! { let r8_reg: &Value = &console.registers[RegSize::Byte(r8)]; }.into()).unwrap());
+            item_fun.block.stmts.insert(2, syn::parse(quote! { match_value!(r8_reg, Value::Byte(r) => { r8_val = **r; }); }.into()).unwrap());
+        },
+        "r16" => {
+            item_fun.block.stmts.insert(0, syn::parse(quote! { let r16_val: u16; }.into()).unwrap());
+            item_fun.block.stmts.insert(1, syn::parse(quote! { let r16_reg: &Value = &console.registers[RegSize::Word(r16)]; }.into()).unwrap());
+            item_fun.block.stmts.insert(2, syn::parse(quote! { match_value!(r16_reg, Value::Word(r) => { r16_val = **r; }); }.into()).unwrap());
+        },
+        _ => panic!("Invalid register parameter. Possible args are: r8; r16"),
+    };
 
     item_fun.into_token_stream().into()
 }

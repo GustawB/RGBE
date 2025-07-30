@@ -1,4 +1,4 @@
-use macros::match_value;
+use macros::{arg_register, match_value};
 use crate::{bit_ops::{carry, half_carry}, constants::*, types::*};
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
@@ -7,22 +7,18 @@ fn ld_r16_imm16(r16: u8, console: &mut Console) {
     match_value!(reg, Value::Word(r) => { **r = imm16; })
 }
 
+#[arg_register(r16)]
 fn ld_r16mem_a(r16: u8, console: &mut Console) {
-    let dest_reg: &Value = &console.registers[RegSize::Word(r16)];
     let a_reg: &Value = &console.registers[RegSize::Byte(A)];
-    match_value!(dest_reg, Value::Word(r) => {
-        match_value!(a_reg, Value::Byte(a) =>  {
-            console.addrBus[(**r) as usize] = **a;
-        })
+    match_value!(a_reg, Value::Byte(a) =>  {
+        console.addrBus[r16_val as usize] = **a;
     })
 }
 
+#[arg_register(r16)]
 fn ld_a_r16mm(r16: u8, console: &mut Console) {
-    let src_val: u16;
-    let src_reg: &Value = &console.registers[RegSize::Word(r16)];
-    match_value!(src_reg, Value::Word(r) => { src_val = **r; });
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    match_value!(a_reg, Value::Byte(a) => { **a = console.addrBus[src_val as usize]; })
+    match_value!(a_reg, Value::Byte(a) => { **a = console.addrBus[r16_val as usize]; })
 }
 
 fn ld_imm16_sp(console: &mut Console) {
@@ -44,19 +40,17 @@ fn dec_r16(r16: u8, console: &mut Console) {
     match_value!(reg, Value::Word(r) => { (**r) -= 1; });
 }
 
+#[arg_register(r16)]
 fn add_hl_r16(r16: u8, console: &mut Console) {
     let base: u16;
-    let addend: u16;
-    let src_reg: &Value = &console.registers[RegSize::Word(r16)];
-    match_value!(src_reg, Value::Word(r) => { addend = **r; });
     let hl_reg: &mut Value = &mut console.registers[RegSize::Word(HL)];
     match_value!(hl_reg, Value::Word(hl) => {
         base = **hl;
-        (**hl) += addend;
+        (**hl) += r16_val;
         console.registers.clear_flag(flag::N);
     });
-    console.registers.clear_or_set_flag(half_carry::add_16(base, addend), flag::H);
-    console.registers.clear_or_set_flag(carry::add_16(base, addend), flag::C);
+    console.registers.clear_or_set_flag(half_carry::add_16(base, r16_val), flag::H);
+    console.registers.clear_or_set_flag(carry::add_16(base, r16_val), flag::C);
 }
 
 fn inc_r8(r8: u8, console: &mut Console) {
