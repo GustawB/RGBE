@@ -1,10 +1,10 @@
 use core::panic;
 
-use macros::{arg, match_value};
+use macros::{arg_register, match_value};
 
 use crate::{bit_ops::*, constants::*, types::*};
 
-#[arg(r8)]
+#[arg_register(r8)]
 fn arithm_a_r8<OP: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     let base: u8;
@@ -33,7 +33,7 @@ fn arithm_a_r8<OP: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
     }
 }
 
-#[arg(r8)]
+#[arg_register(r8)]
 fn logic_a_r8<OP: BitFlag>(r8: u8, console: &mut Console) {
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     let res: u8;
