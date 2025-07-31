@@ -8,6 +8,7 @@ pub struct Console<'c> {
     pub addrBus: [u8; ADDR_BUS_SIZE],
     executable: File,
     pub registers: Registers<'c>,
+    stack: Vec<u8>,
 }
 
 impl<'c> Console<'c> {
@@ -16,6 +17,7 @@ impl<'c> Console<'c> {
             addrBus: [0; ADDR_BUS_SIZE],
             executable: executable,
             registers: Registers::init(),
+            stack: Vec::new(),
         }
     }
 
@@ -32,10 +34,25 @@ impl<'c> Console<'c> {
     }
 
     pub fn move_pc(&mut self, amount: i16) {
-        match self.executable.seek_relative(amount as i64) {
+        match self.executable.seek_relative(amount.into()) {
             Ok(()) => (),
-            Err(..) => panic!("Falied to move program counter."),
+            Err(..) => panic!("Failed to move program counter."),
         }
+    }
+
+    pub fn set_pc(&mut self, val: u16) {
+        match self.executable.seek(SeekFrom::Start(val.into())) {
+            Ok(res_pos) => if res_pos != val.into() {panic!("Program counter set to invalid value.")},
+            Err(..) => panic!("Failed to set program counter."),
+        }
+    }
+
+    pub fn stk_push(&mut self, val: u8) {
+        self.stack.push(val);
+    }
+
+    pub fn stk_pop(&mut self) -> u8 {
+        self.stack.pop().unwrap()
     }
 
     fn step(&mut self) -> Result<()> {
@@ -74,11 +91,13 @@ pub struct Registers<'r> {
 pub enum Value<'v> {
     Byte(&'v mut u8),
     Word(&'v mut u16),
+    WordSTK(&'v mut u16),
 }
 
 pub enum RegSize {
     Byte(u8),
     Word(u8),
+    WordSTK(u8),
 }
 
 impl<'r> Registers<'r> {
@@ -195,6 +214,7 @@ impl<'a> Index<RegSize> for Registers<'a> {
         match index {
             RegSize::Byte(i) => unimplemented!(),
             RegSize::Word(i) => unimplemented!(),
+            RegSize::WordSTK(i) => unimplemented!(),
         }
     }
 }
@@ -204,6 +224,7 @@ impl<'a> IndexMut<RegSize> for Registers<'a> {
         match index {
             RegSize::Byte(i) => unimplemented!(),
             RegSize::Word(i) => unimplemented!(),
+            RegSize::WordSTK(i) => unimplemented!(),
         }
     }
 }

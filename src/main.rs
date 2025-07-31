@@ -6,9 +6,11 @@ use std::io::BufReader;
 mod bit_ops;
 mod constants;
 mod types;
+mod common;
 mod block_zero;
 mod block_one;
 mod block_two;
+mod block_three;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
