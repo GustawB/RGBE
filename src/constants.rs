@@ -10,6 +10,7 @@ pub mod cond {
 pub const SP: u8                = 3;
 pub const HL: u8                = 2;
 pub const A: u8                 = 7;
+pub const C: u8                 = 1;
 pub const F: u8                 = 8;
 
 pub mod flag {

@@ -14,6 +14,7 @@ fn logic_a_r8<OP: BitFlag>(r8: u8, console: &mut Console) {
     logic_a_operand::<OP>(r8_val, console);
 }
 
+
 #[arg_register(r8)]
 fn cp_a_r8(r8: u8, console: &mut Console) {
     cp_a_operand(r8_val, console);

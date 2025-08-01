@@ -53,6 +53,16 @@ pub fn arg_register(attr: TokenStream, item: TokenStream) -> TokenStream {
             item_fun.block.stmts.insert(1, syn::parse(quote! { let r16_reg: &Value = &console.registers[RegSize::Word(r16)]; }.into()).unwrap());
             item_fun.block.stmts.insert(2, syn::parse(quote! { match_value!(r16_reg, Value::Word(r) => { r16_val = **r; }); }.into()).unwrap());
         },
+        "a" => {
+            item_fun.block.stmts.insert(0, syn::parse(quote! { let a_val: u8; }.into()).unwrap());
+            item_fun.block.stmts.insert(1, syn::parse(quote! { let a_reg: &Value = &console.registers[RegSize::Byte(A)]; }.into()).unwrap());
+            item_fun.block.stmts.insert(2, syn::parse(quote! { match_value!(a_reg, Value::Byte(r) => { a_val = **r; }); }.into()).unwrap());
+        },
+        "c" => {
+            item_fun.block.stmts.insert(0, syn::parse(quote! { let c_val: u8; }.into()).unwrap());
+            item_fun.block.stmts.insert(1, syn::parse(quote! { let c_reg: &Value = &console.registers[RegSize::Byte(C)]; }.into()).unwrap());
+            item_fun.block.stmts.insert(2, syn::parse(quote! { match_value!(c_reg, Value::Byte(r) => { c_val = **r; }); }.into()).unwrap());
+        }
         _ => panic!("Invalid register parameter. Possible args are: r8; r16"),
     };
 

@@ -47,6 +47,10 @@ impl<'c> Console<'c> {
         }
     }
 
+    pub fn get_pc(&mut self) -> u16 {
+        self.executable.stream_position().unwrap() as u16
+    }
+
     pub fn stk_push(&mut self, val: u8) {
         self.stack.push(val);
     }
