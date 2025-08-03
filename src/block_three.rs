@@ -1,6 +1,6 @@
 use macros::{arg_register, match_value};
 
-use crate::{common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{BitFlag, A, C, HL}, types::{Console, RegSize, Value}};
+use crate::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, BitFlag, A, C, HL, SP}, types::{Console, RegSize, Value}};
 
 fn pop_low_high(console: &mut Console) -> (u16, u16) {
     let low: u16 = console.stk_pop() as u16;
@@ -97,4 +97,64 @@ fn push_r16stk(r16stk: u8, console: &mut Console) {
 #[arg_register(a)] #[arg_register(c)]
 fn ldh_c_a(console: &mut Console) {
     console.addrBus[(0xFF00 + c_val as u16) as usize] = a_val;
+}
+
+#[arg_register(a)]
+fn ldh_imm8_a(console: &mut Console) {
+    let imm8: u8 = console.fetch_byte();
+    console.addrBus[(0xFF00 + imm8 as u16) as usize] = a_val;
+}
+
+#[arg_register(a)]
+fn ld_imm16_a(console: &mut Console) {
+    let imm16: u16 = console.fetch_two_bytes();
+    console.addrBus[imm16 as usize] = a_val;
+}
+
+fn load_mem_into_a(addr: u16, console: &mut Console) {
+    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
+    match_value!(a_reg, Value::Byte(r) => {
+        **r = console.addrBus[addr as usize];
+    });
+}
+
+#[arg_register(c)]
+fn ldh_a_c(console: &mut Console) {
+    load_mem_into_a(0xFF00 + c_val as u16, console);
+}
+
+fn ldh_a_imm8(console: &mut Console) {
+    let imm8: u8 = console.fetch_byte();
+    load_mem_into_a(0xFF00 + imm8 as u16, console);
+}
+
+fn ld_a_imm16(console: &mut Console) {
+    let imm16: u16 = console.fetch_two_bytes();
+    load_mem_into_a(imm16, console);
+}
+
+fn add_sp_imm8(console: &mut Console) -> u16 {
+    console.registers.clear_flags(&[flag::Z, flag::N]);
+    let imm8: u8 = console.fetch_byte();
+    let sp_reg: &mut Value = &mut console.registers[RegSize::Word(SP)];
+    let base: u16;
+    match_value!(sp_reg, Value::Word(r) => {
+        base = **r;
+        **r += imm8 as u16;
+        console.registers.clear_or_set_flag(half_carry::add_16(base, imm8 as u16), flag::H);
+        console.registers.clear_or_set_flag(carry::add_16(base, imm8 as u16), flag::C);
+    });
+    base + imm8 as u16
+}
+
+fn ld_hl_sp_imm8(console: &mut Console) {
+    let tmp: u16 = add_sp_imm8(console);
+    let hl_reg: &mut Value = &mut console.registers[RegSize::Word(HL)];
+    match_value!(hl_reg, Value::Word(r) => { **r = tmp; });
+}
+
+#[arg_register(hl)]
+fn ld_sp_hl(console: &mut Console) {
+    let sp_reg: &mut Value = &mut console.registers[RegSize::Word(SP)];
+    match_value!(sp_reg, Value::Word(r) => { **r = hl_val; });
 }

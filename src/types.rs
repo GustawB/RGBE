@@ -1,5 +1,7 @@
 use std::fs::File;
 use std::io::{Read, Result, Seek, SeekFrom};
+use macros::match_value;
+
 use crate::{block_zero, constants::*};
 use std::ops::{Index, IndexMut};
 use std::marker::{self, PhantomData};
@@ -8,7 +10,6 @@ pub struct Console<'c> {
     pub addrBus: [u8; ADDR_BUS_SIZE],
     executable: File,
     pub registers: Registers<'c>,
-    stack: Vec<u8>,
 }
 
 impl<'c> Console<'c> {
@@ -17,7 +18,6 @@ impl<'c> Console<'c> {
             addrBus: [0; ADDR_BUS_SIZE],
             executable: executable,
             registers: Registers::init(),
-            stack: Vec::new(),
         }
     }
 
@@ -33,7 +33,7 @@ impl<'c> Console<'c> {
         ((buf[1] as u16) << 8) | buf[0] as u16 // Little endian garbage
     }
 
-    pub fn move_pc(&mut self, amount: i16) {
+    pub fn move_pc(&mut self, amount: u16) {
         match self.executable.seek_relative(amount.into()) {
             Ok(()) => (),
             Err(..) => panic!("Failed to move program counter."),
@@ -52,11 +52,19 @@ impl<'c> Console<'c> {
     }
 
     pub fn stk_push(&mut self, val: u8) {
-        self.stack.push(val);
+        let sp_reg: &mut Value = &mut self.registers[RegSize::Word(SP)];
+        match_value!(sp_reg, Value::Word(r) => {
+            **r -= 1;
+            self.addrBus[**r as usize] = val;
+        });
     }
 
     pub fn stk_pop(&mut self) -> u8 {
-        self.stack.pop().unwrap()
+        let sp_reg: &mut Value = &mut self.registers[RegSize::Word(SP)];
+        match_value!(sp_reg, Value::Word(r) => {
+            **r += 1;
+            self.addrBus[**r as usize]
+        })
     }
 
     fn step(&mut self) -> Result<()> {
@@ -83,12 +91,12 @@ impl<'c> Console<'c> {
 }
 
 pub struct Registers<'r> {
-    AF: [i8; 2],
-    BC: [i8; 2],
-    DE: [i8; 2],
-    HL: [i8; 2],
-    SP: [i8; 2],
-    PC: [i8; 2],
+    AF: [u8; 2],
+    BC: [u8; 2],
+    DE: [u8; 2],
+    HL: [u8; 2],
+    SP: [u8; 2],
+    PC: [u8; 2],
     _marker: marker::PhantomData<&'r u8>,
 }
 
@@ -111,14 +119,14 @@ impl<'r> Registers<'r> {
             BC: [0, 0],
             DE: [0, 0],
             HL: [0, 0],
-            SP: [0, 0],
+            SP: [0xFF, 0xFE],
             PC: [0, 0],
             _marker: PhantomData
         }
     }
 
-    pub fn get_r8(&mut self, idx: u8) -> &mut i8 {
-        let res: &mut i8;
+    pub fn get_r8(&mut self, idx: u8) -> &mut u8 {
+        let res: &mut u8;
         unsafe {
             let ptr = match idx {
                 0 => self.BC.as_mut_ptr(),
@@ -137,14 +145,14 @@ impl<'r> Registers<'r> {
         res
     }
 
-    pub fn get_r16(&mut self, idx: u8) -> &mut i16 {
-        let res: &mut i16;
+    pub fn get_r16(&mut self, idx: u8) -> &mut u16 {
+        let res: &mut u16;
         unsafe {
-            let ptr: *mut i16 = match idx {
-                0 => self.BC.as_mut_ptr() as *mut i16,
-                1 => self.DE.as_mut_ptr() as *mut i16,
-                2 => self.HL.as_mut_ptr() as *mut i16,
-                3 => self.SP.as_mut_ptr() as *mut i16,
+            let ptr: *mut u16 = match idx {
+                0 => self.BC.as_mut_ptr() as *mut u16,
+                1 => self.DE.as_mut_ptr() as *mut u16,
+                2 => self.HL.as_mut_ptr() as *mut u16,
+                3 => self.SP.as_mut_ptr() as *mut u16,
                 _ => panic!("Index out of range")
             };
             res = &mut *ptr;
@@ -152,14 +160,14 @@ impl<'r> Registers<'r> {
         res
     }
 
-    fn get_r16stk(&mut self, idx: u8) -> &mut i16 {
-        let res: &mut i16;
+    fn get_r16stk(&mut self, idx: u8) -> &mut u16 {
+        let res: &mut u16;
         unsafe {
-            let ptr: *mut i16 = match idx {
-                0 => self.BC.as_mut_ptr() as *mut i16,
-                1 => self.DE.as_mut_ptr() as *mut i16,
-                2 => self.HL.as_mut_ptr() as *mut i16,
-                3 => self.AF.as_mut_ptr() as *mut i16,
+            let ptr: *mut u16 = match idx {
+                0 => self.BC.as_mut_ptr() as *mut u16,
+                1 => self.DE.as_mut_ptr() as *mut u16,
+                2 => self.HL.as_mut_ptr() as *mut u16,
+                3 => self.AF.as_mut_ptr() as *mut u16,
                 _ => panic!("Index out of range")
             };
             res = &mut *ptr;
@@ -168,15 +176,15 @@ impl<'r> Registers<'r> {
     }
 
     pub fn is_flag_set(&self, flag: u8) -> bool {
-        (self.AF[1] & (flag as i8)) != 0
+        (self.AF[1] & (flag as u8)) != 0
     }
 
     pub fn set_flag(&mut self, flag: u8) {
-        self.AF[1] = self.AF[1] | (flag as i8);
+        self.AF[1] = self.AF[1] | (flag as u8);
     }
 
     pub fn clear_flag(&mut self, flag: u8) {
-        self.AF[1] = self.AF[1] & (!(flag as i8));
+        self.AF[1] = self.AF[1] & (!(flag as u8));
     }
 
     pub fn clear_flags(&mut self, flags: &[u8]) {
