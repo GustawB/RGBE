@@ -13,6 +13,8 @@ pub const A: u8                 = 7;
 pub const C: u8                 = 1;
 pub const F: u8                 = 8;
 
+pub const IME: u16              = 0xFFFF;
+
 pub mod flag {
     pub const Z: u8                 = 0x80;
     pub const N: u8                 = 0x40;

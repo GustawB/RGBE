@@ -1,6 +1,6 @@
 use macros::{arg_register, match_value};
 
-use crate::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, BitFlag, A, C, HL, SP}, types::{Console, RegSize, Value}};
+use crate::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, BitFlag, A, C, HL, IME, SP}, types::{Console, RegSize, Value}};
 
 fn pop_low_high(console: &mut Console) -> (u16, u16) {
     let low: u16 = console.stk_pop() as u16;
@@ -157,4 +157,12 @@ fn ld_hl_sp_imm8(console: &mut Console) {
 fn ld_sp_hl(console: &mut Console) {
     let sp_reg: &mut Value = &mut console.registers[RegSize::Word(SP)];
     match_value!(sp_reg, Value::Word(r) => { **r = hl_val; });
+}
+
+fn di(console: &mut Console) {
+    console.addrBus[IME as usize] = 0;
+}
+
+fn ei(console: &mut Console) {
+    
 }
