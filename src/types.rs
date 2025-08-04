@@ -10,6 +10,7 @@ pub struct Console<'c> {
     pub addrBus: [u8; ADDR_BUS_SIZE],
     executable: File,
     pub registers: Registers<'c>,
+    pub pending_ei: bool,
 }
 
 impl<'c> Console<'c> {
@@ -18,6 +19,7 @@ impl<'c> Console<'c> {
             addrBus: [0; ADDR_BUS_SIZE],
             executable: executable,
             registers: Registers::init(),
+            pending_ei: false,
         }
     }
 
@@ -85,7 +87,11 @@ impl<'c> Console<'c> {
 
     pub fn execute(&mut self) -> Result<()> {
         loop {
-            
+            // ...
+            if self.pending_ei {
+                self.addrBus[IME as usize] = 1;
+                self.pending_ei = false;
+            }
         }
     }
 }

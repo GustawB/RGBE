@@ -1,6 +1,8 @@
+use core::panic;
+
 use macros::{arg_register, match_value};
 
-use crate::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, BitFlag, A, C, HL, IME, SP}, types::{Console, RegSize, Value}};
+use crate::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, BitFlag, A, ADD, AND, C, CARRY, HL, IME, NO_CARRY, OR, SP, SUB, XOR}, types::{Console, RegSize, Value}};
 
 fn pop_low_high(console: &mut Console) -> (u16, u16) {
     let low: u16 = console.stk_pop() as u16;
@@ -35,7 +37,8 @@ fn ret_cond(cc: u8, console: &mut Console) {
 }
 
 fn reti(console: &mut Console) {
-    // TODO: implement
+    ret(console);
+    console.addrBus[IME as usize] = 1;
 }
 
 fn jp_cc_imm16(cc: u8, console: &mut Console) {
@@ -164,5 +167,75 @@ fn di(console: &mut Console) {
 }
 
 fn ei(console: &mut Console) {
-    
+    console.pending_ei = true;
+}
+
+pub fn dispatch(instr: u8, console: &mut Console) -> () {
+    let cc: u8 = (instr << 3) >> 5;
+    let tgt3: u8 = (instr << 2) >> 5;
+    let r16stk: u8 = (instr << 2) >> 6;
+
+    if instr == 198 {
+        arithm_a_r8::<ADD, NO_CARRY>(console);
+    } else if instr == 206 {
+        arithm_a_r8::<ADD, CARRY>(console);
+    } else if instr == 214 {
+        arithm_a_r8::<SUB, NO_CARRY>(console);
+    } else if instr == 222 {
+        arithm_a_r8::<SUB, CARRY>(console);
+    } else if instr == 230 {
+        logic_a_r8::<AND>(console);
+    } else if instr == 238 {
+        logic_a_r8::<XOR>(console);
+    } else if instr == 246 {
+        logic_a_r8::<OR>(console);
+    } else if instr == 254 {
+        cp_a_r8(console);
+    } else if instr & 0x18 == 192 {
+        ret_cond(cc, console);
+    } else if instr == 201 {
+        ret(console);
+    } else if instr == 217 {
+        reti(console);
+    } else if instr & 0x18 == 194 {
+        jp_cc_imm16(cc, console);
+    } else if instr == 195 {
+        jp_imm16(console);
+    } else if instr == 233 {
+        jp_hl(console);
+    } else if instr & 0x18 == 196 {
+        call_cc_imm16(cc, console);
+    } else if instr == 205 {
+        call_imm16(console);
+    } else if instr & 0x38 == 199 {
+        rst_tgt3(tgt3, console);
+    } else if instr & 0x00FF == 1 {
+        pop_r16stk(r16stk, console);
+    } else if instr & 0x00FF == 5 {
+        push_r16stk(r16stk, console);
+    } else if instr == 226 {
+        ldh_c_a(console);
+    } else if instr == 224 {
+        ldh_imm8_a(console);
+    } else if instr == 234 {
+        ld_imm16_a(console);
+    } else if instr == 242 {
+        ldh_a_c(console);
+    } else if instr == 240 {
+        ldh_a_imm8(console);
+    } else if instr == 250 {
+        ld_a_imm16(console);
+    } else if instr == 232 {
+        add_sp_imm8(console);
+    } else if instr == 248 {
+        ld_hl_sp_imm8(console);
+    } else if instr == 249 {
+        ld_sp_hl(console);
+    } else if instr == 243 {
+        di(console);
+    } else if instr == 251 {
+        ei(console);
+    } else {
+        panic!("Invalid opcode for block three");
+    }
 }
