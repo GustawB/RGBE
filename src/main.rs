@@ -11,6 +11,7 @@ mod block_zero;
 mod block_one;
 mod block_two;
 mod block_three;
+mod block_cb;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

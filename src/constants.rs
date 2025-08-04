@@ -61,3 +61,13 @@ pub struct NO_CARRY;
 impl BitFlag for NO_CARRY {
     const VALUE: u8 = 1;
 }
+
+pub struct LEFT;
+impl BitFlag for LEFT {
+    const VALUE: u8 = 0;
+}
+
+pub struct RIGHT;
+impl BitFlag for RIGHT {
+    const VALUE: u8 = 1;
+}
