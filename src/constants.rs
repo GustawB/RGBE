@@ -72,3 +72,7 @@ pub struct RIGHT;
 impl BitFlag for RIGHT {
     const VALUE: u8 = 1;
 }
+
+pub trait RegSize {
+    const VALUE: u8;
+}

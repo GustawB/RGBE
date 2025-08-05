@@ -2,12 +2,12 @@ use std::fs::File;
 use std::io::{Read, Result, Seek, SeekFrom};
 use macros::match_value;
 
-use crate::{block_zero, constants::*};
+use crate::{block_cb, block_one, block_three, block_two, block_zero, constants::*};
 use std::ops::{Index, IndexMut};
 use std::marker::{self, PhantomData};
 
 pub struct Console<'c> {
-    pub addrBus: [u8; ADDR_BUS_SIZE],
+    pub addr_bus: [u8; ADDR_BUS_SIZE],
     executable: File,
     pub registers: Registers<'c>,
     pub pending_ei: bool,
@@ -16,7 +16,7 @@ pub struct Console<'c> {
 impl<'c> Console<'c> {
     pub fn init(executable: File) -> Console<'c> {
         Console { 
-            addrBus: [0; ADDR_BUS_SIZE],
+            addr_bus: [0; ADDR_BUS_SIZE],
             executable: executable,
             registers: Registers::init(),
             pending_ei: false,
@@ -57,7 +57,7 @@ impl<'c> Console<'c> {
         let sp_reg: &mut Value = &mut self.registers[RegSize::Word(SP)];
         match_value!(sp_reg, Value::Word(r) => {
             **r -= 1;
-            self.addrBus[**r as usize] = val;
+            self.addr_bus[**r as usize] = val;
         });
     }
 
@@ -65,31 +65,31 @@ impl<'c> Console<'c> {
         let sp_reg: &mut Value = &mut self.registers[RegSize::Word(SP)];
         match_value!(sp_reg, Value::Word(r) => {
             **r += 1;
-            self.addrBus[**r as usize]
+            self.addr_bus[**r as usize]
         })
     }
 
-    fn step(&mut self) -> Result<()> {
+    fn step(&mut self) {
         let bt = self.fetch_byte();
         if bt == 0xCD {
-            Ok(())
+            block_cb::dispatch(bt, self);
         }
         else {
-            Ok (match bt >> 6 {
+            match bt >> 6 {
                 0 => block_zero::dispatch(bt, self),
-                1=> unimplemented!(),
-                2=> unimplemented!(),
-                3=> unimplemented!(),
+                1 => block_one::dispatch(bt, self),
+                2 => block_two::dispatch(bt, self),
+                3=>  block_three::dispatch(bt, self),
                 _ => panic!("Invalid instruction"),
-            })
+            };
         }
     }
 
-    pub fn execute(&mut self) -> Result<()> {
+    pub fn execute(&mut self) {
         loop {
-            // ...
+            self.step();
             if self.pending_ei {
-                self.addrBus[IME as usize] = 1;
+                self.addr_bus[IME as usize] = 1;
                 self.pending_ei = false;
             }
         }

@@ -11,22 +11,22 @@ fn ld_r16_imm16(r16: u8, console: &mut Console) {
 fn ld_r16mem_a(r16: u8, console: &mut Console) {
     let a_reg: &Value = &console.registers[RegSize::Byte(A)];
     match_value!(a_reg, Value::Byte(a) =>  {
-        console.addrBus[r16_val as usize] = **a;
+        console.addr_bus[r16_val as usize] = **a;
     })
 }
 
 #[arg_register(r16)]
 fn ld_a_r16mm(r16: u8, console: &mut Console) {
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    match_value!(a_reg, Value::Byte(a) => { **a = console.addrBus[r16_val as usize]; })
+    match_value!(a_reg, Value::Byte(a) => { **a = console.addr_bus[r16_val as usize]; })
 }
 
 fn ld_imm16_sp(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
     let sp_reg: &mut Value = &mut console.registers[RegSize::Word(SP)];
     match_value!(sp_reg, Value::Word(r) => {
-        console.addrBus[imm16 as usize] = (**r & 0xFF) as u8;
-        console.addrBus[(imm16 + 1) as usize] = (**r >> 8) as u8;
+        console.addr_bus[imm16 as usize] = (**r & 0xFF) as u8;
+        console.addr_bus[(imm16 + 1) as usize] = (**r >> 8) as u8;
     })
 }
 

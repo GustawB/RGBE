@@ -38,7 +38,7 @@ fn ret_cond(cc: u8, console: &mut Console) {
 
 fn reti(console: &mut Console) {
     ret(console);
-    console.addrBus[IME as usize] = 1;
+    console.addr_bus[IME as usize] = 1;
 }
 
 fn jp_cc_imm16(cc: u8, console: &mut Console) {
@@ -99,25 +99,25 @@ fn push_r16stk(r16stk: u8, console: &mut Console) {
 
 #[arg_register(a)] #[arg_register(c)]
 fn ldh_c_a(console: &mut Console) {
-    console.addrBus[(0xFF00 + c_val as u16) as usize] = a_val;
+    console.addr_bus[(0xFF00 + c_val as u16) as usize] = a_val;
 }
 
 #[arg_register(a)]
 fn ldh_imm8_a(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
-    console.addrBus[(0xFF00 + imm8 as u16) as usize] = a_val;
+    console.addr_bus[(0xFF00 + imm8 as u16) as usize] = a_val;
 }
 
 #[arg_register(a)]
 fn ld_imm16_a(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    console.addrBus[imm16 as usize] = a_val;
+    console.addr_bus[imm16 as usize] = a_val;
 }
 
 fn load_mem_into_a(addr: u16, console: &mut Console) {
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
     match_value!(a_reg, Value::Byte(r) => {
-        **r = console.addrBus[addr as usize];
+        **r = console.addr_bus[addr as usize];
     });
 }
 
@@ -163,7 +163,7 @@ fn ld_sp_hl(console: &mut Console) {
 }
 
 fn di(console: &mut Console) {
-    console.addrBus[IME as usize] = 0;
+    console.addr_bus[IME as usize] = 0;
 }
 
 fn ei(console: &mut Console) {
