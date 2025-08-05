@@ -1,5 +1,5 @@
 use macros::{arg_register, match_value};
-use crate::{bit_ops::{carry, half_carry}, constants::*, types::*};
+use crate::{bit_ops::{carry, half_carry}, common::rotate_operand, constants::*, types::*};
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
@@ -80,53 +80,11 @@ fn dec_r8(r8: u8, console: &mut Console) {
 fn ld_r8_imm8(r8: u8, console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
     let reg: &mut Value = &mut console.registers[RegSize::Byte(r8)];
-    match_value!(reg, Value::Byte(r) => { **r = imm8; })
+    match_value!(reg, Value::Byte(r) => { **r = imm8; });
 }
 
-fn rlca(console: &mut Console) {
-    console.registers.clear_flags(&[flag::Z, flag::N, flag::H]);
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    let mut leftmost_bit: u8 = 0;
-    match_value!(a_reg, Value::Byte(r) => {
-        leftmost_bit = **r >> 7;
-        **r = (**r << 1) | leftmost_bit;
-    });
-    console.registers.clear_or_set_flag(leftmost_bit == 0, flag::C);
-}
-
-fn rrca(console: &mut Console) {
-    console.registers.clear_flags(&[flag::Z, flag::N, flag::H]);
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    let rightmost_bit: u8;
-    match_value!(a_reg, Value::Byte(r) => {
-        rightmost_bit = **r << 7;
-        **r = (**r >> 1) | (rightmost_bit << 7);
-    });
-    console.registers.clear_or_set_flag(rightmost_bit == 0, flag::C);
-}
-
-fn rla(console: &mut Console) {
-    console.registers.clear_flags(&[flag::Z, flag::N, flag::H]);
-    let c_bit = if console.registers.is_flag_set(flag::C) {1} else {0}; 
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    let leftmost_bit: u8;
-    match_value!(a_reg, Value::Byte(r) => {
-        leftmost_bit = **r >> 7;
-        **r = (**r << 1) | c_bit;
-    });
-    console.registers.clear_or_set_flag(leftmost_bit == 0, flag::C);
-}
-
-fn rra(console: &mut Console) {
-    console.registers.clear_flags(&[flag::Z, flag::N, flag::H]);
-    let c_bit = if console.registers.is_flag_set(flag::C) {1} else {0}; 
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    let rightmost_bit: u8;
-    match_value!(a_reg, Value::Byte(r) => {
-        rightmost_bit = **r << 7;
-        **r = (**r >> 1) | (c_bit << 7);
-    });
-    console.registers.clear_or_set_flag(rightmost_bit == 0, flag::C);
+fn rotate_a<DIR: BitFlag, C: BitFlag>(console: &mut Console) {
+    rotate_operand::<DIR, C>(EA, console);
 }
 
 fn daa(console: &mut Console) {
@@ -135,6 +93,7 @@ fn daa(console: &mut Console) {
     let c_flag: bool = console.registers.is_flag_set(flag::C);
     let n_flag: bool = console.registers.is_flag_set(flag::N);
     let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
+    let base: u8;
     if n_flag {
         if h_flag {
             adjustment += 0x6;
@@ -142,7 +101,12 @@ fn daa(console: &mut Console) {
         if c_flag {
             adjustment += 0x60;
         }
-        match_value!(a_reg, Value::Byte(r) => { **r -= adjustment; });
+        match_value!(a_reg, Value::Byte(r) => {
+            base = **r;
+            **r -= adjustment;
+        });
+        console.registers.clear_or_set_flag(base - adjustment == 0, flag::Z);
+        console.registers.clear_or_set_flag(carry::sub_8(base, adjustment), flag::C);
     }
     else {
         match_value!(a_reg, Value::Byte(r) => {
@@ -152,10 +116,13 @@ fn daa(console: &mut Console) {
             if c_flag || **r > 0x99 {
                 adjustment += 0x60;
             }
+            base = **r;
             **r += adjustment;
         });
+        console.registers.clear_or_set_flag(base + adjustment == 0, flag::Z);
+        console.registers.clear_or_set_flag(carry::add_8(base, adjustment), flag::C);
     }
-    // TODO add setting of carry flag depending on the result.
+    console.registers.clear_flag(flag::H);
 }
 
 fn cpl(console: &mut Console) {
@@ -213,13 +180,13 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
     } else if instr & 0x07 == 6 {
         ld_r8_imm8(op, console);
     } else if instr == 7 {
-        rlca(console);
+        rotate_a::<LEFT, CARRY>(console);
     } else if instr == 15 {
-        rrca(console);
+        rotate_a::<RIGHT, CARRY>(console);
     } else if instr == 23 {
-        rla(console);
+        rotate_a::<LEFT, NO_CARRY>(console);
     } else if instr == 31 {
-        rra(console);
+        rotate_a::<RIGHT, NO_CARRY>(console);
     } else if instr == 39 {
         daa(console);
     } else if instr == 47 {
