@@ -1,8 +1,5 @@
 use core::panic;
-
-use macros::{arg_register, match_value};
-
-use crate::{common::rotate_operand, constants::{flag, BitFlag, CARRY, LEFT, NO_CARRY, RIGHT}, types::{Console, RegSize, Value}};
+use crate::{common::rotate_operand, constants::{flag, BitFlag, CARRY, LEFT, NO_CARRY, RIGHT}, types::{Byte, Console}};
 
 fn rotate<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
     rotate_operand::<DIR, C>(r8, console);
@@ -10,68 +7,58 @@ fn rotate<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
 
 fn shift<DIR: BitFlag>(r8: u8, console: &mut Console) {
     console.registers.clear_flags(&[flag::N, flag::H]);
-    let r8_reg: &mut Value = &mut console.registers[RegSize::Byte(r8)];
+    let mut r8_val: u8 = console.registers[Byte { idx: r8 }];
     let c: u8;
-    let res: u8;
-    match_value!(r8_reg, Value::Byte(r) => {
-        match DIR::VALUE {
-            0 => {
-                c = **r >> 7;
-                **r <<= 1;
-            },
-            1 => {
-                c = **r & 0x1;
-                **r >>= 1;
-            }
-            _ => panic!("Invalid direction"),
+    match DIR::VALUE {
+        0 => {
+            c = r8_val >> 7;
+            r8_val <<= 1;
+        },
+        1 => {
+            c = r8_val & 0x1;
+            r8_val >>= 1;
         }
-        res = **r;
-    });
-    console.registers.clear_or_set_flag(res == 0, flag::Z);
+        _ => panic!("Invalid direction"),
+    }
+
+    console.registers.clear_or_set_flag(r8_val == 0, flag::Z);
     console.registers.clear_or_set_flag(c != 0, flag::C);
+    *(&mut console.registers[Byte { idx: r8 }]) = r8_val;
 }
 
 fn swap_r8(r8: u8, console: &mut Console) {
     console.registers.clear_flags(&[flag::N, flag::H, flag::C]);
-    let r8_reg: &mut Value = &mut console.registers[RegSize::Byte(r8)];
-    let res: u8;
-    match_value!(r8_reg, Value::Byte(r) => {
-        **r = **r << 4 | **r >> 4;
-        res = **r;
-    });
-    console.registers.clear_or_set_flag(res == 0, flag::Z);
+    let mut r8_val: u8 = console.registers[Byte { idx: r8 }];
+    r8_val = r8_val << 4 | r8_val >> 4;
+    console.registers.clear_or_set_flag(r8_val == 0, flag::Z);
+    *(&mut console.registers[Byte { idx: r8 }]) = r8_val;
 }
 
 fn srl_r8(r8: u8, console: &mut Console) {
     console.registers.clear_flags(&[flag::N, flag::H, flag::C]);
-    let r8_reg: &mut Value = &mut console.registers[RegSize::Byte(r8)];
-    let res: u8;
-    let c: u8;
-    match_value!(r8_reg, Value::Byte(r) => {
-        c = **r & 0x1;
-        **r = **r >> 1;
-        res = **r;
-    });
-    console.registers.clear_or_set_flag(res == 0, flag::Z);
+    let mut r8_val: u8 = console.registers[Byte { idx: r8 }];
+    let c: u8 = r8_val & 0x1;
+    r8_val >>= 1;
+    console.registers.clear_or_set_flag(r8_val == 0, flag::Z);
     console.registers.clear_or_set_flag(c != 0, flag::Z);
+    *(&mut console.registers[Byte { idx: r8 }]) = r8_val;
 }
 
-#[arg_register(r8)]
 fn bit_b3_r8(b3: u8, r8: u8, console: &mut Console) {
+    let r8_val: u8 = console.registers[Byte { idx: r8 }];
     console.registers.clear_flag(flag::N);
     console.registers.set_flag(flag::H);
     console.registers.clear_or_set_flag(r8_val & 0x1 << b3 == 0, flag::Z);
 }
 
 fn res_b3_r8(b3: u8, r8: u8, console: &mut Console) {
-    let r8_reg: &mut Value = &mut console.registers[RegSize::Byte(r8)];
-    match_value!(r8_reg, Value::Byte(r) => { **r &= !(0x1 << b3); });
+    let r8_val: &mut u8 = &mut console.registers[Byte { idx: r8 }];
+    *r8_val &= !(0x1 << b3);
 }
 
-#[arg_register(r8)]
 fn set_b3_r8(b3: u8, r8: u8, console: &mut Console) {
-    let r8_reg: &mut Value = &mut console.registers[RegSize::Byte(r8)];
-    match_value!(r8_reg, Value::Byte(r) => { **r |= 0x1 << b3; });
+    let r8_val: &mut u8 = &mut console.registers[Byte { idx: r8 }];
+    *r8_val |= 0x1 << b3;
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {

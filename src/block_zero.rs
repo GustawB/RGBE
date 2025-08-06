@@ -1,4 +1,3 @@
-use macros::{arg_register, match_value};
 use crate::{bit_ops::{carry, half_carry}, common::rotate_operand, constants::*, types::*};
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
@@ -99,7 +98,7 @@ fn daa(console: &mut Console) {
         console.registers.clear_or_set_flag(carry::add_8(a_val - adjustment, adjustment), flag::C);
     }
     console.registers.clear_flag(flag::H);
-    
+
     let a_val_mut: &mut u8 = &mut console.registers[Byte { idx: A }];
     if n_flag { *a_val_mut -= adjustment; } else { *a_val_mut += adjustment; }
 }

@@ -1,8 +1,6 @@
 use core::panic;
 
-use macros::{arg_register, match_value};
-
-use crate::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, BitFlag, A, ADD, AND, C, CARRY, HL, IME, NO_CARRY, OR, SP, SUB, XOR}, types::{Console, RegSize, Value}};
+use crate::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, BitFlag, A, ADD, AND, C, CARRY, HL, IME, NO_CARRY, OR, SP, SUB, XOR}, types::{Byte, Console, Word, WordSTK}};
 
 fn pop_low_high(console: &mut Console) -> (u16, u16) {
     let low: u16 = console.stk_pop() as u16;
@@ -54,9 +52,7 @@ fn jp_imm16(console: &mut Console) {
 }
 
 fn jp_hl(console: &mut Console) {
-    let hl_val: u16;
-    let hl_reg: &Value = &console.registers[RegSize::Word(HL)];
-    match_value!(hl_reg, Value::Word(hl) => {hl_val = **hl});
+    let hl_val: u16 = console.registers[Word { idx: HL }];
     console.set_pc(hl_val);
 }
 
@@ -85,44 +81,41 @@ fn rst_tgt3(tgt3: u8, console: &mut Console) {
 
 fn pop_r16stk(r16stk: u8, console: &mut Console) {
     let (low, high) = pop_low_high(console);
-    let reg: &mut Value = &mut console.registers[RegSize::WordSTK(r16stk)];
-    match_value!(reg, Value::WordSTK(r) => { **r = low | (high << 8); });
+    let reg: &mut u16 = &mut console.registers[WordSTK { idx: r16stk }];
+    *reg = low | (high << 8);
 }
 
 fn push_r16stk(r16stk: u8, console: &mut Console) {
-    let reg: &Value = &console.registers[RegSize::WordSTK(r16stk)];
-    let val: u16;
-    match_value!(reg, Value::WordSTK(r) => { val = **r; });
+    let val: u16 = console.registers[WordSTK { idx: r16stk }];
     console.stk_push((val >> 8) as u8);
     console.stk_push((val & 0x00FF) as u8);
 }
 
-#[arg_register(a)] #[arg_register(c)]
 fn ldh_c_a(console: &mut Console) {
+    let a_val: u8 = console.registers[Byte { idx: A }];
+    let c_val: u8 = console.registers[Byte { idx: C }];
     console.addr_bus[(0xFF00 + c_val as u16) as usize] = a_val;
 }
 
-#[arg_register(a)]
 fn ldh_imm8_a(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
+    let a_val: u8 = console.registers[Byte { idx: A }];
     console.addr_bus[(0xFF00 + imm8 as u16) as usize] = a_val;
 }
 
-#[arg_register(a)]
 fn ld_imm16_a(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
+    let a_val: u8 = console.registers[Byte { idx: A }];
     console.addr_bus[imm16 as usize] = a_val;
 }
 
 fn load_mem_into_a(addr: u16, console: &mut Console) {
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    match_value!(a_reg, Value::Byte(r) => {
-        **r = console.addr_bus[addr as usize];
-    });
+    let a_val: &mut u8 = &mut console.registers[Byte { idx: A }];
+    *a_val = console.addr_bus[addr as usize];
 }
 
-#[arg_register(c)]
 fn ldh_a_c(console: &mut Console) {
+    let c_val: u8 = console.registers[Byte { idx: C }];
     load_mem_into_a(0xFF00 + c_val as u16, console);
 }
 
@@ -139,27 +132,22 @@ fn ld_a_imm16(console: &mut Console) {
 fn add_sp_imm8(console: &mut Console) -> u16 {
     console.registers.clear_flags(&[flag::Z, flag::N]);
     let imm8: u8 = console.fetch_byte();
-    let sp_reg: &mut Value = &mut console.registers[RegSize::Word(SP)];
-    let base: u16;
-    match_value!(sp_reg, Value::Word(r) => {
-        base = **r;
-        **r += imm8 as u16;
-        console.registers.clear_or_set_flag(half_carry::add_16(base, imm8 as u16), flag::H);
-        console.registers.clear_or_set_flag(carry::add_16(base, imm8 as u16), flag::C);
-    });
-    base + imm8 as u16
+    let sp_val: u16 = console.registers[Word { idx: SP }];
+    console.registers.clear_or_set_flag(half_carry::add_16(sp_val, imm8 as u16), flag::H);
+    console.registers.clear_or_set_flag(carry::add_16(sp_val, imm8 as u16), flag::C);
+    *(&mut console.registers[Word { idx: SP }]) = sp_val + imm8 as u16;
+    sp_val + imm8 as u16
 }
 
 fn ld_hl_sp_imm8(console: &mut Console) {
     let tmp: u16 = add_sp_imm8(console);
-    let hl_reg: &mut Value = &mut console.registers[RegSize::Word(HL)];
-    match_value!(hl_reg, Value::Word(r) => { **r = tmp; });
+    let hl_val: &mut u16 = &mut console.registers[Word { idx: HL }];
+    *hl_val = tmp;
 }
 
-#[arg_register(hl)]
 fn ld_sp_hl(console: &mut Console) {
-    let sp_reg: &mut Value = &mut console.registers[RegSize::Word(SP)];
-    match_value!(sp_reg, Value::Word(r) => { **r = hl_val; });
+    let hl_val: u16 = console.registers[Word { idx: HL }];
+    *(&mut console.registers[Word { idx: SP }]) = hl_val;
 }
 
 fn di(console: &mut Console) {
