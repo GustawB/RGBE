@@ -1,15 +1,9 @@
-use macros::match_value;
-
 use crate::types::*;
 
 fn ld_r8_r8(src: u8, dest: u8, console: &mut Console) {
-    let src_val: u8;
-    {
-        let src_reg: &Value = &console.registers[RegSize::Byte(src)];
-        match_value!(src_reg, Value::Byte(r) => { src_val = **r; })
-    }
-    let dest_reg: &mut Value = &mut console.registers[RegSize::Byte(dest)];
-    match_value!(dest_reg, Value::Byte(r) => { **r = src_val; })
+    let src_val: u8 = console.registers[Byte { idx: src }];
+    let dest_val: &mut u8 = &mut console.registers[Byte { idx: dest }];
+    *dest_val = src_val;
 }
 
 fn halt(console: &mut Console) {

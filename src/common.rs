@@ -1,96 +1,84 @@
-use macros::match_value;
-
-use crate::{bit_ops::{carry, half_carry}, constants::{flag, BitFlag, A, EA}, types::{Console, RegSize, Value}};
+use crate::{bit_ops::{carry, half_carry}, constants::{flag, BitFlag, A, EA}, types::{Byte, Console}};
 
 pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(operand: u8, console: &mut Console) {
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    let base: u8;
-    match_value!(a_reg, Value::Byte(r) => {
-        base = **r;
-        match OP::VALUE {
-            0 => **r += operand,
-            1 => **r -= operand,
-            _ => panic!("Flag value out of range (possible values are: 0, 1)"),
-        }
-    });
+    let mut a_val: u8 = console.registers[Byte { idx: A }];
+    match OP::VALUE {
+        0 => a_val += operand,
+        1 => a_val -= operand,
+        _ => panic!("Flag value out of range (possible values are: 0, 1)"),
+    }
 
     console.registers.clear_or_set_flag(OP::VALUE == 0, flag::N);
     match OP::VALUE {
         0 => {
-            console.registers.clear_or_set_flag(base + operand == 0, flag::Z);
-            console.registers.clear_or_set_flag(half_carry::add_8(base, operand), flag::H);
-            console.registers.clear_or_set_flag(carry::add_8(base, operand), flag::C);
+            console.registers.clear_or_set_flag(half_carry::add_8(a_val - operand, operand), flag::H);
+            console.registers.clear_or_set_flag(carry::add_8(a_val - operand, operand), flag::C);
         },
         1 => {
-            console.registers.clear_or_set_flag(base - operand == 0, flag::Z);
-            console.registers.clear_or_set_flag(half_carry::sub_8(base, operand), flag::H);
-            console.registers.clear_or_set_flag(carry::sub_8(base, operand), flag::C);
+            
+            console.registers.clear_or_set_flag(half_carry::sub_8(a_val + operand, operand), flag::H);
+            console.registers.clear_or_set_flag(carry::sub_8(a_val + operand, operand), flag::C);
         }, 
         _ => panic!("Flag value out of range (possible values are: 0, 1)"),
     }
+    console.registers.clear_or_set_flag(a_val == 0, flag::Z);
+    *(&mut console.registers[Byte { idx: A }]) = a_val;
 }
 
 pub fn logic_a_operand<OP: BitFlag>(operand: u8, console: &mut Console) {
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    let res: u8;
-    match_value!(a_reg, Value::Byte(r) => {
-        match OP::VALUE {
-            2 => **r = (**r) & operand,
-            3 => **r = (**r) ^ operand,
-            4 => **r = (**r) | operand,
-            _ => panic!("Flag value out of range (possible values are: 2, 3, 4)"),
-        }
-        res = **r;
-    });
+    let mut a_val: u8 = console.registers[Byte { idx: A }];
+     match OP::VALUE {
+        2 => a_val &= operand,
+        3 => a_val ^= operand,
+        4 => a_val |= operand,
+        _ => panic!("Flag value out of range (possible values are: 2, 3, 4)"),
+    }
 
-    console.registers.clear_or_set_flag(res == 0, flag::Z);
+    console.registers.clear_or_set_flag(a_val == 0, flag::Z);
     console.registers.clear_or_set_flag(OP::VALUE == 2, flag::H);
     console.registers.clear_flags(&[flag::N, flag::C]);
+    *(&mut console.registers[Byte { idx: A }]) = a_val;
 }
 
 pub fn cp_a_operand(operand: u8, console: &mut Console) {
-    let a_reg: &Value = &console.registers[RegSize::Byte(A)];
-    let base: u8;
-    match_value!(a_reg, Value::Byte(r) => { base = **r; });
-
-    console.registers.clear_or_set_flag(base - operand == 0, flag::Z);
+    let a_val: u8 = console.registers[Byte { idx: A }];
+    console.registers.clear_or_set_flag(a_val - operand == 0, flag::Z);
     console.registers.set_flag( flag::N);
-    console.registers.clear_or_set_flag(half_carry::sub_8(base, operand), flag::H);
-    console.registers.clear_or_set_flag(carry::sub_8(base, operand), flag::C);
+    console.registers.clear_or_set_flag(half_carry::sub_8(a_val, operand), flag::H);
+    console.registers.clear_or_set_flag(carry::sub_8(a_val, operand), flag::C);
 }
 
 pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
     console.registers.clear_flags(&[flag::N, flag::H]);
     let curr_c: u8 = console.registers.is_flag_set(flag::C) as u8;
 
-    let reg: &mut Value;
-    if r8 != EA { reg = &mut console.registers[RegSize::Byte(r8)]; }
-    else { reg = &mut console.registers[RegSize::Byte(A)]; }
+    let mut reg: u8;
+    if r8 != EA { reg = console.registers[Byte { idx: r8 }]; }
+    else { reg = console.registers[Byte { idx: A }]; }
 
     let c: u8;
-    let res: u8;
-    match_value!(reg, Value::Byte(r) => {
-        match DIR::VALUE {
-            0 => {
-                c = **r >> 7;
-                match C::VALUE {
-                    0 => **r = **r << 1 | c,
-                    1 => **r = **r << 1 | curr_c,
-                    _ => panic!("Invalid carry"),
-                }
-            },
-            1 => {
-                c = **r & 0x1;
-                match C::VALUE {
-                    0 => **r = **r >> 1 | c << 7,
-                    1 => **r = **r >> 1 | curr_c << 7,
-                    _ => panic!("Invalid carry"),
-                }
-            },
-            _ => panic!("Invalid direction"),
-        };
-        res = **r;
-    });
-    console.registers.clear_or_set_flag(res == 0 && r8 != EA, flag::Z);
+    match DIR::VALUE {
+        0 => {
+            c = reg >> 7;
+            match C::VALUE {
+                0 => reg = reg << 1 | c,
+                1 => reg = reg << 1 | curr_c,
+                _ => panic!("Invalid carry"),
+            }
+        },
+        1 => {
+            c = reg & 0x1;
+            match C::VALUE {
+                0 => reg = reg >> 1 | c << 7,
+                1 => reg = reg >> 1 | curr_c << 7,
+                _ => panic!("Invalid carry"),
+            }
+        },
+        _ => panic!("Invalid direction"),
+    };
+    console.registers.clear_or_set_flag(reg == 0 && r8 != EA, flag::Z);
     console.registers.clear_or_set_flag(c != 0, flag::C);
+
+    if r8 != EA { *(&mut console.registers[Byte { idx: r8 }]) = reg; }
+    else { *(&mut console.registers[Byte { idx: A }]) = reg; }
 }
