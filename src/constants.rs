@@ -12,9 +12,8 @@ pub const HL: u8                = 2;
 pub const A: u8                 = 7;
 pub const EA: u8                = 10; // Explicit A (instead of r8 value)
 pub const C: u8                 = 1;
-pub const F: u8                 = 8;
 
-pub const IME: u16              = 0xFFFF;
+pub const IME: u16              = 0xFFFE;
 
 pub mod flag {
     pub const Z: u8                 = 0x80;
@@ -71,8 +70,4 @@ impl BitFlag for LEFT {
 pub struct RIGHT;
 impl BitFlag for RIGHT {
     const VALUE: u8 = 1;
-}
-
-pub trait RegSize {
-    const VALUE: u8;
 }

@@ -11,6 +11,7 @@ pub mod half_carry {
         ((base & 0x0FFF) + (addend & 0x0FFF)) & 0x1000 != 0
     }
 
+    #[allow(dead_code)]
     pub fn sub_16(base: u16, subtrahend: u16) -> bool {
         (base & 0x0FFF) < (subtrahend & 0x0FFF)
     }
@@ -29,6 +30,7 @@ pub mod carry {
         ((base as u32) + (addend as u32)) > 0xFFFF
     }
 
+    #[allow(dead_code)]
     pub fn sub_16(base: u16, subtrahend: u16) -> bool {
         subtrahend > base
     }

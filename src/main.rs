@@ -1,7 +1,7 @@
 use std::env;
-use std::io::Read;
 use std::fs::File;
-use std::io::BufReader;
+
+use crate::types::Console;
 
 mod bit_ops;
 mod constants;
@@ -15,15 +15,11 @@ mod block_cb;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    assert!(args.len() ==  3);
-    let filename: &String = &args[2];
+    assert!(args.len() == 2);
+    let filename: &String = &args[1];
     
     let file = File::open(filename).unwrap();
-    let mut buf_reader = BufReader::new(file);
+    let mut console: Console = Console::init(file);
 
-    let byte_stream = buf_reader.bytes();
-
-    for b in byte_stream {
-        println!("{}", b.unwrap());
-    }
+    console.execute();
 }

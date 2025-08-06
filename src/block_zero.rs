@@ -2,70 +2,71 @@ use crate::{bit_ops::{carry, half_carry}, common::rotate_operand, constants::*, 
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    let reg: &mut u16 = &mut console.registers[Word { idx: r16 }];
+    let reg: &mut u16 = &mut console.physical[Word { idx: r16 }];
     *reg = imm16;
 }
 
 fn ld_r16mem_a(r16: u8, console: &mut Console) {
-    let a_val: &u8 = &console.registers[Byte { idx: A }];
-    let r16_val: u16 = console.registers[Word { idx: r16 }];
-    console.addr_bus[r16_val as usize] = *a_val;
+    let a_val: &u8 = &console.physical[Byte { idx: A }];
+    let r16_val: u16 = console.physical[Word { idx: r16 }];
+    console.physical.addr_bus[r16_val as usize] = *a_val;
 }
 
 fn ld_a_r16mm(r16: u8, console: &mut Console) {
-    let r16_val: u16 = console.registers[Word { idx: r16 }];
-    let a_val: &mut u8 = &mut console.registers[Byte { idx: A }];
-    *a_val = console.addr_bus[r16_val as usize];
+    let r16_val: u16 = console.physical[Word { idx: r16 }];
+    let addr_bus_val: u8 = console.physical.addr_bus[r16_val as usize];
+    let a_val: &mut u8 = &mut console.physical[Byte { idx: A }];
+    *a_val = addr_bus_val;
 }
 
 fn ld_imm16_sp(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    let sp_val: &mut u16 = &mut console.registers[Word { idx: SP }];
-    console.addr_bus[imm16 as usize] = (*sp_val & 0xFF) as u8;
-    console.addr_bus[(imm16 + 1) as usize] = (*sp_val >> 8) as u8;
+    let sp_val: u16 = console.physical[Word { idx: SP }];
+    console.physical.addr_bus[imm16 as usize] = (sp_val & 0xFF) as u8;
+    console.physical.addr_bus[(imm16 + 1) as usize] = (sp_val >> 8) as u8;
 }
 
 fn inc_r16(r16: u8, console: &mut Console) {
-    let reg: &mut u16 = &mut console.registers[Word { idx: r16 }];
+    let reg: &mut u16 = &mut console.physical[Word { idx: r16 }];
     *reg += 1;
 }
 
 fn dec_r16(r16: u8, console: &mut Console) {
-    let reg: &mut u16 = &mut console.registers[Word { idx: r16 }];
+    let reg: &mut u16 = &mut console.physical[Word { idx: r16 }];
     *reg -= 1;
 }
 
 fn add_hl_r16(r16: u8, console: &mut Console) {
-    let r16_val: u16 = console.registers[Word { idx: r16 }];
-    let hl_val: &mut u16 = &mut console.registers[Word { idx: HL }];
+    let r16_val: u16 = console.physical[Word { idx: r16 }];
+    let hl_val: &mut u16 = &mut console.physical[Word { idx: HL }];
     let base: u16 = *hl_val;
     *hl_val += r16_val;
-    console.registers.clear_flag(flag::N);
-    console.registers.clear_or_set_flag(half_carry::add_16(base, r16_val), flag::H);
-    console.registers.clear_or_set_flag(carry::add_16(base, r16_val), flag::C);
+    console.physical.clear_flag(flag::N);
+    console.physical.clear_or_set_flag(half_carry::add_16(base, r16_val), flag::H);
+    console.physical.clear_or_set_flag(carry::add_16(base, r16_val), flag::C);
 }
 
 fn inc_r8(r8: u8, console: &mut Console) {
-    let reg: &mut u8 = &mut console.registers[Byte { idx: r8 }];
+    let reg: &mut u8 = &mut console.physical[Byte { idx: r8 }];
     let base: u8 = *reg;
     *reg += 1;
-    console.registers.clear_or_set_flag((base + 1) == 0, flag::Z);
-    console.registers.clear_flag(flag::N);
-    console.registers.clear_or_set_flag(half_carry::add_8(base, 1), flag::H);
+    console.physical.clear_or_set_flag((base + 1) == 0, flag::Z);
+    console.physical.clear_flag(flag::N);
+    console.physical.clear_or_set_flag(half_carry::add_8(base, 1), flag::H);
 }
 
 fn dec_r8(r8: u8, console: &mut Console) {
-    let reg: &mut u8 = &mut console.registers[Byte { idx: r8 }];
+    let reg: &mut u8 = &mut console.physical[Byte { idx: r8 }];
     let base: u8 = *reg;
     *reg -= 1;
-    console.registers.clear_or_set_flag((base - 1) == 0, flag::Z);
-    console.registers.set_flag(flag::N);
-    console.registers.clear_or_set_flag(half_carry::sub_8(base, 1), flag::H);
+    console.physical.clear_or_set_flag((base - 1) == 0, flag::Z);
+    console.physical.set_flag(flag::N);
+    console.physical.clear_or_set_flag(half_carry::sub_8(base, 1), flag::H);
 }
 
 fn ld_r8_imm8(r8: u8, console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
-    let reg: &mut u8 = &mut console.registers[Byte { idx: r8 }];
+    let reg: &mut u8 = &mut console.physical[Byte { idx: r8 }];
     *reg = imm8;
 }
 
@@ -75,48 +76,48 @@ fn rotate_a<DIR: BitFlag, C: BitFlag>(console: &mut Console) {
 
 fn daa(console: &mut Console) {
     let mut adjustment: u8 = 0;
-    let a_val: u8 = console.registers[Byte { idx: A }];
-    let n_flag: bool = console.registers.is_flag_set(flag::N);
+    let a_val: u8 = console.physical[Byte { idx: A }];
+    let n_flag: bool = console.physical.is_flag_set(flag::N);
     if n_flag {
-        if console.registers.is_flag_set(flag::H) {
+        if console.physical.is_flag_set(flag::H) {
             adjustment += 0x6;
         }
-        if console.registers.is_flag_set(flag::C) {
+        if console.physical.is_flag_set(flag::C) {
             adjustment += 0x60;
         }
-        console.registers.clear_or_set_flag(a_val - adjustment == 0, flag::Z);
-        console.registers.clear_or_set_flag(carry::sub_8(a_val, adjustment), flag::C);
+        console.physical.clear_or_set_flag(a_val - adjustment == 0, flag::Z);
+        console.physical.clear_or_set_flag(carry::sub_8(a_val, adjustment), flag::C);
     }
     else {
-        if console.registers.is_flag_set(flag::H) || (a_val & 0xF) > 0x9 {
+        if console.physical.is_flag_set(flag::H) || (a_val & 0xF) > 0x9 {
             adjustment += 0x6;
         }
-        if console.registers.is_flag_set(flag::C) || a_val > 0x99 {
+        if console.physical.is_flag_set(flag::C) || a_val > 0x99 {
             adjustment += 0x60;
         }
-        console.registers.clear_or_set_flag(a_val == 0, flag::Z);
-        console.registers.clear_or_set_flag(carry::add_8(a_val - adjustment, adjustment), flag::C);
+        console.physical.clear_or_set_flag(a_val == 0, flag::Z);
+        console.physical.clear_or_set_flag(carry::add_8(a_val - adjustment, adjustment), flag::C);
     }
-    console.registers.clear_flag(flag::H);
+    console.physical.clear_flag(flag::H);
 
-    let a_val_mut: &mut u8 = &mut console.registers[Byte { idx: A }];
+    let a_val_mut: &mut u8 = &mut console.physical[Byte { idx: A }];
     if n_flag { *a_val_mut -= adjustment; } else { *a_val_mut += adjustment; }
 }
 
 fn cpl(console: &mut Console) {
-    console.registers.set_flags(&[flag::N, flag::H]);
-    let a_val: &mut u8 = &mut console.registers[Byte { idx: A }];
+    console.physical.set_flags(&[flag::N, flag::H]);
+    let a_val: &mut u8 = &mut console.physical[Byte { idx: A }];
     *a_val = !(*a_val);
 }
 
 fn scf(console: &mut Console) {
-    console.registers.clear_flags(&[flag::N, flag::H]);
-    console.registers.set_flag(flag::C);
+    console.physical.clear_flags(&[flag::N, flag::H]);
+    console.physical.set_flag(flag::C);
 }
 
 fn ccf(console: &mut Console) {
-    console.registers.clear_flags(&[flag::N, flag::H]);
-    console.registers.clear_or_set_flag(!console.registers.is_flag_set(flag::C), flag::C);
+    console.physical.clear_flags(&[flag::N, flag::H]);
+    console.physical.clear_or_set_flag(!console.physical.is_flag_set(flag::C), flag::C);
 }
 
 fn jr_imm8(console: &mut Console) {
@@ -125,7 +126,7 @@ fn jr_imm8(console: &mut Console) {
 }
 
 fn jr_cc_imm8(cc: u8, console: &mut Console) {
-    if console.registers.is_condition_met(cc) {
+    if console.physical.is_condition_met(cc) {
         jr_imm8(console);
     }
 }
@@ -154,7 +155,7 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
     } else if instr & 0x07 == 4 {
         inc_r8(op, console);
     } else if instr & 0x07 == 5 {
-        dec_r16(op, console);
+        dec_r8(op, console);
     } else if instr & 0x07 == 6 {
         ld_r8_imm8(op, console);
     } else if instr == 7 {

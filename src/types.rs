@@ -1,23 +1,19 @@
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-
 use crate::{block_cb, block_one, block_three, block_two, block_zero, constants::*};
 use std::ops::{Index, IndexMut};
-use std::marker::{self, PhantomData};
 
-pub struct Console<'c> {
-    pub addr_bus: [u8; ADDR_BUS_SIZE],
+pub struct Console {
     executable: File,
-    pub registers: Registers<'c>,
+    pub physical: Physical,
     pub pending_ei: bool,
 }
 
-impl<'c> Console<'c> {
-    pub fn init(executable: File) -> Console<'c> {
+impl Console {
+    pub fn init(executable: File) -> Console {
         Console { 
-            addr_bus: [0; ADDR_BUS_SIZE],
             executable: executable,
-            registers: Registers::init(),
+            physical: Physical::init(),
             pending_ei: false,
         }
     }
@@ -53,15 +49,15 @@ impl<'c> Console<'c> {
     }
 
     pub fn stk_push(&mut self, val: u8) {
-        let sp_val: &mut u16 = &mut self.registers[Word { idx: SP }];
+        let sp_val: &mut u16 = &mut self.physical[Word { idx: SP }];
         *sp_val -= 1;
-        self.addr_bus[*sp_val as usize] = val;
+        self.physical.addr_bus[*sp_val as usize] = val;
     }
 
     pub fn stk_pop(&mut self) -> u8 {
-        let sp_val: &mut u16 = &mut self.registers[Word { idx: SP }];
+        let sp_val: &mut u16 = &mut self.physical[Word { idx: SP }];
         *sp_val += 1;
-        self.addr_bus[*sp_val as usize]
+        self.physical.addr_bus[*sp_val as usize]
     }
 
     fn step(&mut self) {
@@ -84,7 +80,7 @@ impl<'c> Console<'c> {
         loop {
             self.step();
             if self.pending_ei {
-                self.addr_bus[IME as usize] = 1;
+                self.physical.addr_bus[IME as usize] = 1;
                 self.pending_ei = false;
             }
         }
@@ -96,26 +92,24 @@ union Register {
     halves: [u8; 2]
 }
 
-pub struct Registers<'r> {
+pub struct Physical {
     af: Register,
     bc: Register,
     de: Register,
     hl: Register,
     sp: Register,
-    pc: Register,
-    _marker: marker::PhantomData<&'r u8>,
+    pub addr_bus: [u8; ADDR_BUS_SIZE],
 }
 
-impl<'r> Registers<'r> {
-    pub fn init() -> Registers<'r> {
-        Registers {
+impl Physical {
+    fn init() -> Physical {
+        Physical {
             af: Register { value: 0 },
             bc: Register { value: 0 },
             de: Register { value: 0 },
             hl: Register { value: 0 },
             sp: Register { halves: [0xFF, 0xFE] },
-            pc: Register { value: 0 },
-            _marker: PhantomData
+            addr_bus: [0; ADDR_BUS_SIZE],
         }
     }
 
@@ -128,7 +122,7 @@ impl<'r> Registers<'r> {
                 3 => &self.de.halves[0],
                 4 => &self.hl.halves[1],
                 5 => &self.hl.halves[0],
-                6 => panic!("Unimplemented"),
+                6 => &self.addr_bus[69],
                 7 => &self.af.halves[1],
                 8 => &self.af.halves[0],
                 _ => panic!("Index out of range"),
@@ -145,7 +139,7 @@ impl<'r> Registers<'r> {
                 3 => &mut self.de.halves[0],
                 4 => &mut self.hl.halves[1],
                 5 => &mut self.hl.halves[0],
-                6 => panic!("Unimplemented"),
+                6 => &mut self.addr_bus[69],
                 7 => &mut self.af.halves[1],
                 8 => &mut self.af.halves[0],
                 _ => panic!("Index out of range"),
@@ -255,7 +249,7 @@ pub struct WordSTK {
     pub idx: u8,
 }
 
-impl<'r> Index<Byte> for Registers<'r> {
+impl Index<Byte> for Physical {
     type Output = u8;
 
     fn index(&self, index: Byte) -> &Self::Output {
@@ -263,13 +257,13 @@ impl<'r> Index<Byte> for Registers<'r> {
     }
 }
 
-impl<'a> IndexMut<Byte> for Registers<'a> {
+impl IndexMut<Byte> for Physical {
     fn index_mut(&mut self, index: Byte) -> &mut Self::Output {
         self.get_r8_mut(index.idx)
     }
 }
 
-impl<'r> Index<Word> for Registers<'r> {
+impl Index<Word> for Physical {
     type Output = u16;
 
     fn index(&self, index: Word) -> &Self::Output {
@@ -277,13 +271,13 @@ impl<'r> Index<Word> for Registers<'r> {
     }
 }
 
-impl<'a> IndexMut<Word> for Registers<'a> {
+impl IndexMut<Word> for Physical {
     fn index_mut(&mut self, index: Word) -> &mut Self::Output {
         self.get_r16_mut(index.idx)
     }
 }
 
-impl<'r> Index<WordSTK> for Registers<'r> {
+impl Index<WordSTK> for Physical {
     type Output = u16;
 
     fn index(&self, index: WordSTK) -> &Self::Output {
@@ -291,7 +285,7 @@ impl<'r> Index<WordSTK> for Registers<'r> {
     }
 }
 
-impl<'a> IndexMut<WordSTK> for Registers<'a> {
+impl IndexMut<WordSTK> for Physical {
     fn index_mut(&mut self, index: WordSTK) -> &mut Self::Output {
         self.get_r16stk_mut(index.idx)
     }

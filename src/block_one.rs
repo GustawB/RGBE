@@ -1,12 +1,13 @@
 use crate::types::*;
 
 fn ld_r8_r8(src: u8, dest: u8, console: &mut Console) {
-    let src_val: u8 = console.registers[Byte { idx: src }];
-    let dest_val: &mut u8 = &mut console.registers[Byte { idx: dest }];
+    let src_val: u8 = console.physical[Byte { idx: src }];
+    let dest_val: &mut u8 = &mut console.physical[Byte { idx: dest }];
     *dest_val = src_val;
 }
 
-fn halt(console: &mut Console) {
+
+fn halt(_console: &mut Console) {
     // TODO: implement
 }
 

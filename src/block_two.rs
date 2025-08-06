@@ -3,15 +3,15 @@ use core::panic;
 use crate::{common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::*, types::*};
 
 fn arithm_a_r8<OP: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
-    arithm_a_operand::<OP, C>(console.registers[Byte { idx: r8 }], console);
+    arithm_a_operand::<OP, C>(console.physical[Byte { idx: r8 }], console);
 }
 
 fn logic_a_r8<OP: BitFlag>(r8: u8, console: &mut Console) {
-    logic_a_operand::<OP>(console.registers[Byte { idx: r8 }], console);
+    logic_a_operand::<OP>(console.physical[Byte { idx: r8 }], console);
 }
 
 fn cp_a_r8(r8: u8, console: &mut Console) {
-    cp_a_operand(console.registers[Byte { idx: r8 }], console);
+    cp_a_operand(console.physical[Byte { idx: r8 }], console);
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {
