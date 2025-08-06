@@ -1,6 +1,5 @@
 use std::fs::File;
-use std::io::{Read, Result, Seek, SeekFrom};
-use macros::match_value;
+use std::io::{Read, Seek, SeekFrom};
 
 use crate::{block_cb, block_one, block_three, block_two, block_zero, constants::*};
 use std::ops::{Index, IndexMut};
@@ -54,19 +53,15 @@ impl<'c> Console<'c> {
     }
 
     pub fn stk_push(&mut self, val: u8) {
-        let sp_reg: &mut Value = &mut self.registers[RegSize::Word(SP)];
-        match_value!(sp_reg, Value::Word(r) => {
-            **r -= 1;
-            self.addr_bus[**r as usize] = val;
-        });
+        let sp_val: &mut u16 = &mut self.registers[Word { idx: SP }];
+        *sp_val -= 1;
+        self.addr_bus[*sp_val as usize] = val;
     }
 
     pub fn stk_pop(&mut self) -> u8 {
-        let sp_reg: &mut Value = &mut self.registers[RegSize::Word(SP)];
-        match_value!(sp_reg, Value::Word(r) => {
-            **r += 1;
-            self.addr_bus[**r as usize]
-        })
+        let sp_val: &mut u16 = &mut self.registers[Word { idx: SP }];
+        *sp_val += 1;
+        self.addr_bus[*sp_val as usize]
     }
 
     fn step(&mut self) {
@@ -96,101 +91,126 @@ impl<'c> Console<'c> {
     }
 }
 
+union Register {
+    value: u16,
+    halves: [u8; 2]
+}
+
 pub struct Registers<'r> {
-    AF: [u8; 2],
-    BC: [u8; 2],
-    DE: [u8; 2],
-    HL: [u8; 2],
-    SP: [u8; 2],
-    PC: [u8; 2],
+    af: Register,
+    bc: Register,
+    de: Register,
+    hl: Register,
+    sp: Register,
+    pc: Register,
     _marker: marker::PhantomData<&'r u8>,
-}
-
-pub enum Value<'v> {
-    Byte(&'v mut u8),
-    Word(&'v mut u16),
-    WordSTK(&'v mut u16),
-}
-
-pub enum RegSize {
-    Byte(u8),
-    Word(u8),
-    WordSTK(u8),
 }
 
 impl<'r> Registers<'r> {
     pub fn init() -> Registers<'r> {
         Registers {
-            AF: [0, 0],
-            BC: [0, 0],
-            DE: [0, 0],
-            HL: [0, 0],
-            SP: [0xFF, 0xFE],
-            PC: [0, 0],
+            af: Register { value: 0 },
+            bc: Register { value: 0 },
+            de: Register { value: 0 },
+            hl: Register { value: 0 },
+            sp: Register { halves: [0xFF, 0xFE] },
+            pc: Register { value: 0 },
             _marker: PhantomData
         }
     }
 
-    pub fn get_r8(&mut self, idx: u8) -> &mut u8 {
-        let res: &mut u8;
+    pub fn get_r8(&self, idx: u8) -> &u8 {
         unsafe {
-            let ptr = match idx {
-                0 => self.BC.as_mut_ptr(),
-                1 => self.BC.as_mut_ptr().add(1),
-                2 => self.DE.as_mut_ptr(),
-                3 => self.DE.as_mut_ptr().add(1),
-                4 => self.HL.as_mut_ptr(),
-                5 => self.HL.as_mut_ptr().add(1),
+            match idx {
+                0 => &self.bc.halves[1],
+                1 => &self.bc.halves[0],
+                2 => &self.de.halves[1],
+                3 => &self.de.halves[0],
+                4 => &self.hl.halves[1],
+                5 => &self.hl.halves[0],
                 6 => panic!("Unimplemented"),
-                7 => self.AF.as_mut_ptr(),
-                8 => self.AF.as_mut_ptr().add(1),
-                _ => panic!("Index out of range")
-            };
-            res = &mut *ptr;
-        };
-        res
+                7 => &self.af.halves[1],
+                8 => &self.af.halves[0],
+                _ => panic!("Index out of range"),
+            }
+        }
     }
 
-    pub fn get_r16(&mut self, idx: u8) -> &mut u16 {
-        let res: &mut u16;
+    pub fn get_r8_mut(&mut self, idx: u8) -> &mut u8 {
         unsafe {
-            let ptr: *mut u16 = match idx {
-                0 => self.BC.as_mut_ptr() as *mut u16,
-                1 => self.DE.as_mut_ptr() as *mut u16,
-                2 => self.HL.as_mut_ptr() as *mut u16,
-                3 => self.SP.as_mut_ptr() as *mut u16,
-                _ => panic!("Index out of range")
-            };
-            res = &mut *ptr;
+            match idx {
+                0 => &mut self.bc.halves[1],
+                1 => &mut self.bc.halves[0],
+                2 => &mut self.de.halves[1],
+                3 => &mut self.de.halves[0],
+                4 => &mut self.hl.halves[1],
+                5 => &mut self.hl.halves[0],
+                6 => panic!("Unimplemented"),
+                7 => &mut self.af.halves[1],
+                8 => &mut self.af.halves[0],
+                _ => panic!("Index out of range"),
+            }
         }
-        res
     }
 
-    fn get_r16stk(&mut self, idx: u8) -> &mut u16 {
-        let res: &mut u16;
+    pub fn get_r16(&self, idx: u8) -> &u16 {
         unsafe {
-            let ptr: *mut u16 = match idx {
-                0 => self.BC.as_mut_ptr() as *mut u16,
-                1 => self.DE.as_mut_ptr() as *mut u16,
-                2 => self.HL.as_mut_ptr() as *mut u16,
-                3 => self.AF.as_mut_ptr() as *mut u16,
-                _ => panic!("Index out of range")
-            };
-            res = &mut *ptr;
+            match idx {
+                0 => &self.bc.value,
+                1 => &self.de.value,
+                2 => &self.hl.value,
+                3 => &self.sp.value,
+                _ => panic!("Index out of range"),
+            }
         }
-        res
+    }
+
+    pub fn get_r16_mut(&mut self, idx: u8) -> &mut u16 {
+        unsafe {
+            match idx {
+                0 => &mut self.bc.value,
+                1 => &mut self.de.value,
+                2 => &mut self.hl.value,
+                3 => &mut self.sp.value,
+                _ => panic!("Index out of range"),
+            }
+        }
+    }
+
+    fn get_r16stk(&self, idx: u8) -> &u16 {
+        unsafe {
+            match idx {
+                0 => &self.bc.value,
+                1 => &self.de.value,
+                2 => &self.hl.value,
+                3 => &self.af.value,
+                _ => panic!("Index out of range")
+            }
+        }
+    }
+
+    fn get_r16stk_mut(&mut self, idx: u8) -> &mut u16 {
+        unsafe {
+            match idx {
+                0 => &mut self.bc.value,
+                1 => &mut self.de.value,
+                2 => &mut self.hl.value,
+                3 => &mut self.af.value,
+                _ => panic!("Index out of range")
+            }
+        }
     }
 
     pub fn is_flag_set(&self, flag: u8) -> bool {
-        (self.AF[1] & (flag as u8)) != 0
+        unsafe { (self.af.halves[1] & (flag as u8))  != 0 }
     }
 
     pub fn set_flag(&mut self, flag: u8) {
-        self.AF[1] = self.AF[1] | (flag as u8);
+        unsafe { self.af.halves[1] = self.af.halves[1] | (flag as u8); }
     }
 
     pub fn clear_flag(&mut self, flag: u8) {
-        self.AF[1] = self.AF[1] & (!(flag as u8));
+        unsafe { self.af.halves[1] = self.af.halves[1] & (!(flag as u8)); }
     }
 
     pub fn clear_flags(&mut self, flags: &[u8]) {
@@ -225,24 +245,54 @@ impl<'r> Registers<'r> {
 }
 }
 
-impl<'a> Index<RegSize> for Registers<'a> {
-    type Output = Value<'a>;
+pub struct Byte {
+    pub idx: u8,
+}
+pub struct Word {
+    pub idx: u8,
+}
+pub struct WordSTK {
+    pub idx: u8,
+}
 
-    fn index(&self, index: RegSize) -> &Self::Output {
-        match index {
-            RegSize::Byte(i) => unimplemented!(),
-            RegSize::Word(i) => unimplemented!(),
-            RegSize::WordSTK(i) => unimplemented!(),
-        }
+impl<'r> Index<Byte> for Registers<'r> {
+    type Output = u8;
+
+    fn index(&self, index: Byte) -> &Self::Output {
+        self.get_r8(index.idx)
     }
 }
 
-impl<'a> IndexMut<RegSize> for Registers<'a> {
-    fn index_mut(&mut self, index: RegSize) -> &mut Self::Output {
-        match index {
-            RegSize::Byte(i) => unimplemented!(),
-            RegSize::Word(i) => unimplemented!(),
-            RegSize::WordSTK(i) => unimplemented!(),
-        }
+impl<'a> IndexMut<Byte> for Registers<'a> {
+    fn index_mut(&mut self, index: Byte) -> &mut Self::Output {
+        self.get_r8_mut(index.idx)
+    }
+}
+
+impl<'r> Index<Word> for Registers<'r> {
+    type Output = u16;
+
+    fn index(&self, index: Word) -> &Self::Output {
+        self.get_r16(index.idx)
+    }
+}
+
+impl<'a> IndexMut<Word> for Registers<'a> {
+    fn index_mut(&mut self, index: Word) -> &mut Self::Output {
+        self.get_r16_mut(index.idx)
+    }
+}
+
+impl<'r> Index<WordSTK> for Registers<'r> {
+    type Output = u16;
+
+    fn index(&self, index: WordSTK) -> &Self::Output {
+        self.get_r16stk(index.idx)
+    }
+}
+
+impl<'a> IndexMut<WordSTK> for Registers<'a> {
+    fn index_mut(&mut self, index: WordSTK) -> &mut Self::Output {
+        self.get_r16stk_mut(index.idx)
     }
 }
