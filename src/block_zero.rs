@@ -3,84 +3,71 @@ use crate::{bit_ops::{carry, half_carry}, common::rotate_operand, constants::*, 
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    let reg: &mut Value = &mut console.registers[RegSize::Word(r16)];
-    match_value!(reg, Value::Word(r) => { **r = imm16; })
+    let reg: &mut u16 = &mut console.registers[Word { idx: r16 }];
+    *reg = imm16;
 }
 
-#[arg_register(r16)]
 fn ld_r16mem_a(r16: u8, console: &mut Console) {
-    let a_reg: &Value = &console.registers[RegSize::Byte(A)];
-    match_value!(a_reg, Value::Byte(a) =>  {
-        console.addr_bus[r16_val as usize] = **a;
-    })
+    let a_val: &u8 = &console.registers[Byte { idx: A }];
+    let r16_val: u16 = console.registers[Word { idx: r16 }];
+    console.addr_bus[r16_val as usize] = *a_val;
 }
 
-#[arg_register(r16)]
 fn ld_a_r16mm(r16: u8, console: &mut Console) {
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    match_value!(a_reg, Value::Byte(a) => { **a = console.addr_bus[r16_val as usize]; })
+    let r16_val: u16 = console.registers[Word { idx: r16 }];
+    let a_val: &mut u8 = &mut console.registers[Byte { idx: A }];
+    *a_val = console.addr_bus[r16_val as usize];
 }
 
 fn ld_imm16_sp(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    let sp_reg: &mut Value = &mut console.registers[RegSize::Word(SP)];
-    match_value!(sp_reg, Value::Word(r) => {
-        console.addr_bus[imm16 as usize] = (**r & 0xFF) as u8;
-        console.addr_bus[(imm16 + 1) as usize] = (**r >> 8) as u8;
-    })
+    let sp_val: &mut u16 = &mut console.registers[Word { idx: SP }];
+    console.addr_bus[imm16 as usize] = (*sp_val & 0xFF) as u8;
+    console.addr_bus[(imm16 + 1) as usize] = (*sp_val >> 8) as u8;
 }
 
 fn inc_r16(r16: u8, console: &mut Console) {
-    let reg: &mut Value = &mut console.registers[RegSize::Word(r16)];
-    match_value!(reg, Value::Word(r) => { (**r) += 1; });
+    let reg: &mut u16 = &mut console.registers[Word { idx: r16 }];
+    *reg += 1;
 }
 
 fn dec_r16(r16: u8, console: &mut Console) {
-    let reg: &mut Value = &mut console.registers[RegSize::Word(r16)];
-    match_value!(reg, Value::Word(r) => { (**r) -= 1; });
+    let reg: &mut u16 = &mut console.registers[Word { idx: r16 }];
+    *reg -= 1;
 }
 
-#[arg_register(r16)]
 fn add_hl_r16(r16: u8, console: &mut Console) {
-    let base: u16;
-    let hl_reg: &mut Value = &mut console.registers[RegSize::Word(HL)];
-    match_value!(hl_reg, Value::Word(hl) => {
-        base = **hl;
-        (**hl) += r16_val;
-        console.registers.clear_flag(flag::N);
-    });
+    let r16_val: u16 = console.registers[Word { idx: r16 }];
+    let hl_val: &mut u16 = &mut console.registers[Word { idx: HL }];
+    let base: u16 = *hl_val;
+    *hl_val += r16_val;
+    console.registers.clear_flag(flag::N);
     console.registers.clear_or_set_flag(half_carry::add_16(base, r16_val), flag::H);
     console.registers.clear_or_set_flag(carry::add_16(base, r16_val), flag::C);
 }
 
 fn inc_r8(r8: u8, console: &mut Console) {
-    let base: u8;
-    let reg: &mut Value = &mut console.registers[RegSize::Word(r8)];
-    match_value!(reg, Value::Byte(r) => {
-        base = **r;
-        (**r) += 1;
-        console.registers.clear_or_set_flag((base + 1) == 0, flag::Z);
-        console.registers.clear_flag(flag::N);
-    });
+    let reg: &mut u8 = &mut console.registers[Byte { idx: r8 }];
+    let base: u8 = *reg;
+    *reg += 1;
+    console.registers.clear_or_set_flag((base + 1) == 0, flag::Z);
+    console.registers.clear_flag(flag::N);
     console.registers.clear_or_set_flag(half_carry::add_8(base, 1), flag::H);
 }
 
 fn dec_r8(r8: u8, console: &mut Console) {
-    let base: u8;
-    let reg: &mut Value = &mut console.registers[RegSize::Word(r8)];
-    match_value!(reg, Value::Byte(r) => {
-        base = **r;
-        (**r) -= 1;
-        console.registers.clear_or_set_flag((base - 1) == 0, flag::Z);
-        console.registers.set_flag(flag::N);
-    });
+    let reg: &mut u8 = &mut console.registers[Byte { idx: r8 }];
+    let base: u8 = *reg;
+    *reg -= 1;
+    console.registers.clear_or_set_flag((base - 1) == 0, flag::Z);
+    console.registers.set_flag(flag::N);
     console.registers.clear_or_set_flag(half_carry::sub_8(base, 1), flag::H);
 }
 
 fn ld_r8_imm8(r8: u8, console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
-    let reg: &mut Value = &mut console.registers[RegSize::Byte(r8)];
-    match_value!(reg, Value::Byte(r) => { **r = imm8; });
+    let reg: &mut u8 = &mut console.registers[Byte { idx: r8 }];
+    *reg = imm8;
 }
 
 fn rotate_a<DIR: BitFlag, C: BitFlag>(console: &mut Console) {
@@ -89,46 +76,38 @@ fn rotate_a<DIR: BitFlag, C: BitFlag>(console: &mut Console) {
 
 fn daa(console: &mut Console) {
     let mut adjustment: u8 = 0;
-    let h_flag: bool = console.registers.is_flag_set(flag::H);
-    let c_flag: bool = console.registers.is_flag_set(flag::C);
+    let a_val: u8 = console.registers[Byte { idx: A }];
     let n_flag: bool = console.registers.is_flag_set(flag::N);
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    let base: u8;
     if n_flag {
-        if h_flag {
+        if console.registers.is_flag_set(flag::H) {
             adjustment += 0x6;
         }
-        if c_flag {
+        if console.registers.is_flag_set(flag::C) {
             adjustment += 0x60;
         }
-        match_value!(a_reg, Value::Byte(r) => {
-            base = **r;
-            **r -= adjustment;
-        });
-        console.registers.clear_or_set_flag(base - adjustment == 0, flag::Z);
-        console.registers.clear_or_set_flag(carry::sub_8(base, adjustment), flag::C);
+        console.registers.clear_or_set_flag(a_val - adjustment == 0, flag::Z);
+        console.registers.clear_or_set_flag(carry::sub_8(a_val, adjustment), flag::C);
     }
     else {
-        match_value!(a_reg, Value::Byte(r) => {
-            if h_flag || (**r & 0xF) > 0x9 {
-                adjustment += 0x6;
-            }
-            if c_flag || **r > 0x99 {
-                adjustment += 0x60;
-            }
-            base = **r;
-            **r += adjustment;
-        });
-        console.registers.clear_or_set_flag(base + adjustment == 0, flag::Z);
-        console.registers.clear_or_set_flag(carry::add_8(base, adjustment), flag::C);
+        if console.registers.is_flag_set(flag::H) || (a_val & 0xF) > 0x9 {
+            adjustment += 0x6;
+        }
+        if console.registers.is_flag_set(flag::C) || a_val > 0x99 {
+            adjustment += 0x60;
+        }
+        console.registers.clear_or_set_flag(a_val == 0, flag::Z);
+        console.registers.clear_or_set_flag(carry::add_8(a_val - adjustment, adjustment), flag::C);
     }
     console.registers.clear_flag(flag::H);
+    
+    let a_val_mut: &mut u8 = &mut console.registers[Byte { idx: A }];
+    if n_flag { *a_val_mut -= adjustment; } else { *a_val_mut += adjustment; }
 }
 
 fn cpl(console: &mut Console) {
     console.registers.set_flags(&[flag::N, flag::H]);
-    let a_reg: &mut Value = &mut console.registers[RegSize::Byte(A)];
-    match_value!(a_reg, Value::Byte(r) => { **r = !(**r); })
+    let a_val: &mut u8 = &mut console.registers[Byte { idx: A }];
+    *a_val = !(*a_val);
 }
 
 fn scf(console: &mut Console) {
