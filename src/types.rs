@@ -1,63 +1,79 @@
-use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
 use crate::{block_cb, block_one, block_three, block_two, block_zero, constants::*};
 use std::ops::{Index, IndexMut};
 
+union Register {
+    value: u16,
+    halves: [u8; 2]
+}
+
 pub struct Console {
-    executable: File,
-    pub physical: Physical,
+    pub addr_bus: [u8; ADDR_BUS_SIZE],
+    af: Register,
+    bc: Register,
+    de: Register,
+    hl: Register,
+    sp: Register,
+    ip: Register,
     pub pending_ei: bool,
 }
 
 impl Console {
-    pub fn init(executable: File) -> Console {
-        Console { 
-            executable: executable,
-            physical: Physical::init(),
-            pending_ei: false,
+    pub fn init(boot_rom: Vec<u8>) -> Result<Console, String> {
+        if boot_rom.len() > 0x100 {
+            Err(String::from("Boot rom too long"))
+        } else {
+            let mut tmp_addr_bus = [0; ADDR_BUS_SIZE];
+            for i in 0..boot_rom.len() {
+                tmp_addr_bus[i] = boot_rom[i];
+            }
+            Ok(Console {
+                addr_bus: tmp_addr_bus,
+                af: Register { value: 0 },
+                bc: Register { value: 0 },
+                de: Register { value: 0 },
+                hl: Register { value: 0 },
+                sp: Register { halves: [0xFF, 0xFE] },
+                ip: Register { value: 0 },
+                pending_ei: false,
+            })
         }
     }
 
     pub fn fetch_byte(&mut self) -> u8 {
-        let mut buf: [u8; 1] = [0];
-        self.executable.read_exact(&mut buf).unwrap();
-        buf[0]
+        let res: u8 = unsafe { self.addr_bus[self.ip.value as usize] };
+        unsafe { self.ip.value += 1 };
+        res
     }
 
     pub fn fetch_two_bytes(&mut self) -> u16 {
-        let mut buf: [u8; 2] = [0; 2];
-        self.executable.read_exact(&mut buf).unwrap();
-        ((buf[1] as u16) << 8) | buf[0] as u16 // Little endian garbage
+        let a: u8 = unsafe { self.addr_bus[self.ip.value as usize] };
+        let b: u8 = unsafe { self.addr_bus[self.ip.value as usize + 1] };
+        unsafe { self.ip.value += 2 };
+        ((b as u16) << 8) | a as u16 // Little endian garbage
     }
 
     pub fn move_pc(&mut self, amount: u16) {
-        match self.executable.seek_relative(amount.into()) {
-            Ok(()) => (),
-            Err(..) => panic!("Failed to move program counter."),
-        }
+        unsafe { self.ip.value += amount };
     }
 
     pub fn set_pc(&mut self, val: u16) {
-        match self.executable.seek(SeekFrom::Start(val.into())) {
-            Ok(res_pos) => if res_pos != val.into() {panic!("Program counter set to invalid value.")},
-            Err(..) => panic!("Failed to set program counter."),
-        }
+        self.ip.value = val;
     }
 
     pub fn get_pc(&mut self) -> u16 {
-        self.executable.stream_position().unwrap() as u16
+        unsafe { self.ip.value }
     }
 
     pub fn stk_push(&mut self, val: u8) {
-        let sp_val: &mut u16 = &mut self.physical[Word { idx: SP }];
+        let sp_val: &mut u16 = &mut self[Word { idx: SP }];
         *sp_val -= 1;
-        self.physical.addr_bus[*sp_val as usize] = val;
+        self.addr_bus[*sp_val as usize] = val;
     }
 
     pub fn stk_pop(&mut self) -> u8 {
-        let sp_val: &mut u16 = &mut self.physical[Word { idx: SP }];
+        let sp_val: &mut u16 = &mut self[Word { idx: SP }];
         *sp_val += 1;
-        self.physical.addr_bus[*sp_val as usize]
+        self.addr_bus[*sp_val as usize]
     }
 
     fn step(&mut self) {
@@ -80,40 +96,13 @@ impl Console {
         loop {
             self.step();
             if self.pending_ei {
-                self.physical.addr_bus[IME as usize] = 1;
+                self.addr_bus[IME as usize] = 1;
                 self.pending_ei = false;
             }
         }
     }
-}
 
-union Register {
-    value: u16,
-    halves: [u8; 2]
-}
-
-pub struct Physical {
-    af: Register,
-    bc: Register,
-    de: Register,
-    hl: Register,
-    sp: Register,
-    pub addr_bus: [u8; ADDR_BUS_SIZE],
-}
-
-impl Physical {
-    fn init() -> Physical {
-        Physical {
-            af: Register { value: 0 },
-            bc: Register { value: 0 },
-            de: Register { value: 0 },
-            hl: Register { value: 0 },
-            sp: Register { halves: [0xFF, 0xFE] },
-            addr_bus: [0; ADDR_BUS_SIZE],
-        }
-    }
-
-    pub fn get_r8(&self, idx: u8) -> &u8 {
+    fn get_r8(&self, idx: u8) -> &u8 {
         unsafe {
             match idx {
                 0 => &self.bc.halves[1],
@@ -130,7 +119,7 @@ impl Physical {
         }
     }
 
-    pub fn get_r8_mut(&mut self, idx: u8) -> &mut u8 {
+    fn get_r8_mut(&mut self, idx: u8) -> &mut u8 {
         unsafe {
             match idx {
                 0 => &mut self.bc.halves[1],
@@ -139,7 +128,7 @@ impl Physical {
                 3 => &mut self.de.halves[0],
                 4 => &mut self.hl.halves[1],
                 5 => &mut self.hl.halves[0],
-                6 => &mut self.addr_bus[69],
+                6 => &mut self.addr_bus[self.hl.value as usize],
                 7 => &mut self.af.halves[1],
                 8 => &mut self.af.halves[0],
                 _ => panic!("Index out of range"),
@@ -147,7 +136,7 @@ impl Physical {
         }
     }
 
-    pub fn get_r16(&self, idx: u8) -> &u16 {
+    fn get_r16(&self, idx: u8) -> &u16 {
         unsafe {
             match idx {
                 0 => &self.bc.value,
@@ -159,7 +148,7 @@ impl Physical {
         }
     }
 
-    pub fn get_r16_mut(&mut self, idx: u8) -> &mut u16 {
+    fn get_r16_mut(&mut self, idx: u8) -> &mut u16 {
         unsafe {
             match idx {
                 0 => &mut self.bc.value,
@@ -229,14 +218,14 @@ impl Physical {
     }
 
     pub fn is_condition_met(&self, cc: u8) -> bool {
-    match cc {
-        cond::NZ => !self.is_flag_set(flag::Z),
-        cond::Z => self.is_flag_set(flag::Z),
-        cond::NC => !self.is_flag_set(flag::C),
-        cond::C => self.is_flag_set(flag::C),
-        _ => panic!("Invalid flag encountered"), 
+        match cc {
+            cond::NZ => !self.is_flag_set(flag::Z),
+            cond::Z => self.is_flag_set(flag::Z),
+            cond::NC => !self.is_flag_set(flag::C),
+            cond::C => self.is_flag_set(flag::C),
+            _ => panic!("Invalid flag encountered"), 
+        }
     }
-}
 }
 
 pub struct Byte {
@@ -249,7 +238,7 @@ pub struct WordSTK {
     pub idx: u8,
 }
 
-impl Index<Byte> for Physical {
+impl Index<Byte> for Console {
     type Output = u8;
 
     fn index(&self, index: Byte) -> &Self::Output {
@@ -257,13 +246,13 @@ impl Index<Byte> for Physical {
     }
 }
 
-impl IndexMut<Byte> for Physical {
+impl IndexMut<Byte> for Console {
     fn index_mut(&mut self, index: Byte) -> &mut Self::Output {
         self.get_r8_mut(index.idx)
     }
 }
 
-impl Index<Word> for Physical {
+impl Index<Word> for Console {
     type Output = u16;
 
     fn index(&self, index: Word) -> &Self::Output {
@@ -271,13 +260,13 @@ impl Index<Word> for Physical {
     }
 }
 
-impl IndexMut<Word> for Physical {
+impl IndexMut<Word> for Console {
     fn index_mut(&mut self, index: Word) -> &mut Self::Output {
         self.get_r16_mut(index.idx)
     }
 }
 
-impl Index<WordSTK> for Physical {
+impl Index<WordSTK> for Console {
     type Output = u16;
 
     fn index(&self, index: WordSTK) -> &Self::Output {
@@ -285,7 +274,7 @@ impl Index<WordSTK> for Physical {
     }
 }
 
-impl IndexMut<WordSTK> for Physical {
+impl IndexMut<WordSTK> for Console {
     fn index_mut(&mut self, index: WordSTK) -> &mut Self::Output {
         self.get_r16stk_mut(index.idx)
     }

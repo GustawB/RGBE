@@ -1,8 +1,8 @@
 use crate::types::*;
 
 fn ld_r8_r8(src: u8, dest: u8, console: &mut Console) {
-    let src_val: u8 = console.physical[Byte { idx: src }];
-    let dest_val: &mut u8 = &mut console.physical[Byte { idx: dest }];
+    let src_val: u8 = console[Byte { idx: src }];
+    let dest_val: &mut u8 = &mut console[Byte { idx: dest }];
     *dest_val = src_val;
 }
 

@@ -29,19 +29,19 @@ fn ret(console: &mut Console) {
 }
 
 fn ret_cond(cc: u8, console: &mut Console) {
-    if console.physical.is_condition_met(cc) {
+    if console.is_condition_met(cc) {
         ret(console);
     }
 }
 
 fn reti(console: &mut Console) {
     ret(console);
-    console.physical.addr_bus[IME as usize] = 1;
+    console.addr_bus[IME as usize] = 1;
 }
 
 fn jp_cc_imm16(cc: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    if console.physical.is_condition_met(cc) {
+    if console.is_condition_met(cc) {
         console.set_pc(imm16);
     }
 }
@@ -52,7 +52,7 @@ fn jp_imm16(console: &mut Console) {
 }
 
 fn jp_hl(console: &mut Console) {
-    let hl_val: u16 = console.physical[Word { idx: HL }];
+    let hl_val: u16 = console[Word { idx: HL }];
     console.set_pc(hl_val);
 }
 
@@ -69,7 +69,7 @@ fn call_imm16(console: &mut Console) {
 }
 
 fn call_cc_imm16(cc: u8, console: &mut Console) {
-    if console.physical.is_condition_met(cc) {
+    if console.is_condition_met(cc) {
         call_imm16(console);
     }
 }
@@ -81,42 +81,42 @@ fn rst_tgt3(tgt3: u8, console: &mut Console) {
 
 fn pop_r16stk(r16stk: u8, console: &mut Console) {
     let (low, high) = pop_low_high(console);
-    let reg: &mut u16 = &mut console.physical[WordSTK { idx: r16stk }];
+    let reg: &mut u16 = &mut console[WordSTK { idx: r16stk }];
     *reg = low | (high << 8);
 }
 
 fn push_r16stk(r16stk: u8, console: &mut Console) {
-    let val: u16 = console.physical[WordSTK { idx: r16stk }];
+    let val: u16 = console[WordSTK { idx: r16stk }];
     console.stk_push((val >> 8) as u8);
     console.stk_push((val & 0x00FF) as u8);
 }
 
 fn ldh_c_a(console: &mut Console) {
-    let a_val: u8 = console.physical[Byte { idx: A }];
-    let c_val: u8 = console.physical[Byte { idx: C }];
-    console.physical.addr_bus[(0xFF00 + c_val as u16) as usize] = a_val;
+    let a_val: u8 = console[Byte { idx: A }];
+    let c_val: u8 = console[Byte { idx: C }];
+    console.addr_bus[(0xFF00 + c_val as u16) as usize] = a_val;
 }
 
 fn ldh_imm8_a(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
-    let a_val: u8 = console.physical[Byte { idx: A }];
-    console.physical.addr_bus[(0xFF00 + imm8 as u16) as usize] = a_val;
+    let a_val: u8 = console[Byte { idx: A }];
+    console.addr_bus[(0xFF00 + imm8 as u16) as usize] = a_val;
 }
 
 fn ld_imm16_a(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    let a_val: u8 = console.physical[Byte { idx: A }];
-    console.physical.addr_bus[imm16 as usize] = a_val;
+    let a_val: u8 = console[Byte { idx: A }];
+    console.addr_bus[imm16 as usize] = a_val;
 }
 
 fn load_mem_into_a(addr: u16, console: &mut Console) {
-    let addr_val: u8 = console.physical.addr_bus[addr as usize];
-    let a_val: &mut u8 = &mut console.physical[Byte { idx: A }];
+    let addr_val: u8 = console.addr_bus[addr as usize];
+    let a_val: &mut u8 = &mut console[Byte { idx: A }];
     *a_val = addr_val;
 }
 
 fn ldh_a_c(console: &mut Console) {
-    let c_val: u8 = console.physical[Byte { idx: C }];
+    let c_val: u8 = console[Byte { idx: C }];
     load_mem_into_a(0xFF00 + c_val as u16, console);
 }
 
@@ -131,28 +131,28 @@ fn ld_a_imm16(console: &mut Console) {
 }
 
 fn add_sp_imm8(console: &mut Console) -> u16 {
-    console.physical.clear_flags(&[flag::Z, flag::N]);
+    console.clear_flags(&[flag::Z, flag::N]);
     let imm8: u8 = console.fetch_byte();
-    let sp_val: u16 = console.physical[Word { idx: SP }];
-    console.physical.clear_or_set_flag(half_carry::add_16(sp_val, imm8 as u16), flag::H);
-    console.physical.clear_or_set_flag(carry::add_16(sp_val, imm8 as u16), flag::C);
-    *(&mut console.physical[Word { idx: SP }]) = sp_val + imm8 as u16;
+    let sp_val: u16 = console[Word { idx: SP }];
+    console.clear_or_set_flag(half_carry::add_16(sp_val, imm8 as u16), flag::H);
+    console.clear_or_set_flag(carry::add_16(sp_val, imm8 as u16), flag::C);
+    *(&mut console[Word { idx: SP }]) = sp_val + imm8 as u16;
     sp_val + imm8 as u16
 }
 
 fn ld_hl_sp_imm8(console: &mut Console) {
     let tmp: u16 = add_sp_imm8(console);
-    let hl_val: &mut u16 = &mut console.physical[Word { idx: HL }];
+    let hl_val: &mut u16 = &mut console[Word { idx: HL }];
     *hl_val = tmp;
 }
 
 fn ld_sp_hl(console: &mut Console) {
-    let hl_val: u16 = console.physical[Word { idx: HL }];
-    *(&mut console.physical[Word { idx: SP }]) = hl_val;
+    let hl_val: u16 = console[Word { idx: HL }];
+    *(&mut console[Word { idx: SP }]) = hl_val;
 }
 
 fn di(console: &mut Console) {
-    console.physical.addr_bus[IME as usize] = 0;
+    console.addr_bus[IME as usize] = 0;
 }
 
 fn ei(console: &mut Console) {

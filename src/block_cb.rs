@@ -6,8 +6,8 @@ fn rotate<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
 }
 
 fn shift<DIR: BitFlag>(r8: u8, console: &mut Console) {
-    console.physical.clear_flags(&[flag::N, flag::H]);
-    let mut r8_val: u8 = console.physical[Byte { idx: r8 }];
+    console.clear_flags(&[flag::N, flag::H]);
+    let mut r8_val: u8 = console[Byte { idx: r8 }];
     let c: u8;
     match DIR::VALUE {
         0 => {
@@ -21,43 +21,43 @@ fn shift<DIR: BitFlag>(r8: u8, console: &mut Console) {
         _ => panic!("Invalid direction"),
     }
 
-    console.physical.clear_or_set_flag(r8_val == 0, flag::Z);
-    console.physical.clear_or_set_flag(c != 0, flag::C);
-    *(&mut console.physical[Byte { idx: r8 }]) = r8_val;
+    console.clear_or_set_flag(r8_val == 0, flag::Z);
+    console.clear_or_set_flag(c != 0, flag::C);
+    *(&mut console[Byte { idx: r8 }]) = r8_val;
 }
 
 fn swap_r8(r8: u8, console: &mut Console) {
-    console.physical.clear_flags(&[flag::N, flag::H, flag::C]);
-    let mut r8_val: u8 = console.physical[Byte { idx: r8 }];
+    console.clear_flags(&[flag::N, flag::H, flag::C]);
+    let mut r8_val: u8 = console[Byte { idx: r8 }];
     r8_val = r8_val << 4 | r8_val >> 4;
-    console.physical.clear_or_set_flag(r8_val == 0, flag::Z);
-    *(&mut console.physical[Byte { idx: r8 }]) = r8_val;
+    console.clear_or_set_flag(r8_val == 0, flag::Z);
+    *(&mut console[Byte { idx: r8 }]) = r8_val;
 }
 
 fn srl_r8(r8: u8, console: &mut Console) {
-    console.physical.clear_flags(&[flag::N, flag::H, flag::C]);
-    let mut r8_val: u8 = console.physical[Byte { idx: r8 }];
+    console.clear_flags(&[flag::N, flag::H, flag::C]);
+    let mut r8_val: u8 = console[Byte { idx: r8 }];
     let c: u8 = r8_val & 0x1;
     r8_val >>= 1;
-    console.physical.clear_or_set_flag(r8_val == 0, flag::Z);
-    console.physical.clear_or_set_flag(c != 0, flag::Z);
-    *(&mut console.physical[Byte { idx: r8 }]) = r8_val;
+    console.clear_or_set_flag(r8_val == 0, flag::Z);
+    console.clear_or_set_flag(c != 0, flag::Z);
+    *(&mut console[Byte { idx: r8 }]) = r8_val;
 }
 
 fn bit_b3_r8(b3: u8, r8: u8, console: &mut Console) {
-    let r8_val: u8 = console.physical[Byte { idx: r8 }];
-    console.physical.clear_flag(flag::N);
-    console.physical.set_flag(flag::H);
-    console.physical.clear_or_set_flag(r8_val & 0x1 << b3 == 0, flag::Z);
+    let r8_val: u8 = console[Byte { idx: r8 }];
+    console.clear_flag(flag::N);
+    console.set_flag(flag::H);
+    console.clear_or_set_flag(r8_val & 0x1 << b3 == 0, flag::Z);
 }
 
 fn res_b3_r8(b3: u8, r8: u8, console: &mut Console) {
-    let r8_val: &mut u8 = &mut console.physical[Byte { idx: r8 }];
+    let r8_val: &mut u8 = &mut console[Byte { idx: r8 }];
     *r8_val &= !(0x1 << b3);
 }
 
 fn set_b3_r8(b3: u8, r8: u8, console: &mut Console) {
-    let r8_val: &mut u8 = &mut console.physical[Byte { idx: r8 }];
+    let r8_val: &mut u8 = &mut console[Byte { idx: r8 }];
     *r8_val |= 0x1 << b3;
 }
 

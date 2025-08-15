@@ -1,5 +1,6 @@
+use core::panic;
 use std::env;
-use std::fs::File;
+use std::fs::read;
 
 use crate::types::Console;
 
@@ -18,8 +19,11 @@ fn main() {
     assert!(args.len() == 2);
     let filename: &String = &args[1];
     
-    let file = File::open(filename).unwrap();
-    let mut console: Console = Console::init(file);
+    let boot_rom: Vec<u8> = read(filename).expect("Failed to read the boot rom");
+    let mut console: Console = match Console::init(boot_rom) {
+        Ok(c) => c,
+        Err(msg) => panic!("Fainel to create Console: {msg}")
+    };
 
     console.execute();
 }
