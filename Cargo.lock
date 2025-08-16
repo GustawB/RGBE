@@ -3,9 +3,19 @@
 version = 4
 
 [[package]]
+name = "console"
+version = "0.1.0"
+
+[[package]]
 name = "rgbe"
 version = "0.1.0"
+dependencies = [
+ "console",
+]
 
 [[package]]
 name = "rgbed"
 version = "0.1.0"
+dependencies = [
+ "console",
+]

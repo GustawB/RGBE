@@ -1,19 +1,8 @@
-mod console;
-
 use core::panic;
 use std::env;
 use std::fs::read;
 
-use crate::console::Console;
-
-/*mod bit_ops;
-mod constants;
-mod common;
-mod block_zero;
-mod block_one;
-mod block_two;
-mod block_three;
-mod block_cb;*/
+use console::Console;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
