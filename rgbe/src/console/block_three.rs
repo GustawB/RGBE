@@ -1,6 +1,6 @@
 use core::panic;
 
-use crate::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, BitFlag, A, ADD, AND, C, CARRY, HL, IME, NO_CARRY, OR, SP, SUB, XOR}, types::{Byte, Console, Word, WordSTK}};
+use crate::{console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, A, C, HL, IME, SP}}, types::types::{BitFlag, Byte, Word, WordSTK, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}}, Console};
 
 fn pop_low_high(console: &mut Console) -> (u16, u16) {
     let low: u16 = console.stk_pop() as u16;

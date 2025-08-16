@@ -1,5 +1,7 @@
 use core::panic;
-use crate::{common::rotate_operand, constants::{flag, BitFlag, CARRY, LEFT, NO_CARRY, RIGHT}, types::{Byte, Console}};
+
+use crate::Console;
+use crate::console::{helpers::{common::rotate_operand, constants::flag}, types::types::{BitFlag, Byte, CARRY, LEFT, NO_CARRY, RIGHT}};
 
 fn rotate<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
     rotate_operand::<DIR, C>(r8, console);

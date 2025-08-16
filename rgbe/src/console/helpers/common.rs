@@ -1,4 +1,4 @@
-use crate::{bit_ops::{carry, half_carry}, constants::{flag, BitFlag, A, EA}, types::{Byte, Console}};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, constants::{flag, A, EA}}, types::types::{BitFlag, Byte}, Console};
 
 pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(operand: u8, console: &mut Console) {
     let mut a_val: u8 = console[Byte { idx: A }];

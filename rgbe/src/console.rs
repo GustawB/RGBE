@@ -1,10 +1,15 @@
-use crate::{block_cb, block_one, block_three, block_two, block_zero, constants::*};
+mod helpers;
+mod types;
+
+mod block_cb;
+mod block_zero;
+mod block_one;
+mod block_two;
+mod block_three;
+
 use std::ops::{Index, IndexMut};
 
-union Register {
-    value: u16,
-    halves: [u8; 2]
-}
+use crate::console::{helpers::constants::{cond, flag, ADDR_BUS_SIZE, IME, SP}, types::types::{Byte, Register, Word, WordSTK}};
 
 pub struct Console {
     pub addr_bus: [u8; ADDR_BUS_SIZE],
@@ -76,7 +81,8 @@ impl Console {
         self.addr_bus[*sp_val as usize]
     }
 
-    fn step(&mut self) {
+    // Process one instruction. Exposed outside mostly for the debugger
+    pub fn step(&mut self) {
         let bt = self.fetch_byte();
         if bt == 0xCD {
             block_cb::dispatch(bt, self);
@@ -92,6 +98,7 @@ impl Console {
         }
     }
 
+    // Entry point of the console.
     pub fn execute(&mut self) {
         loop {
             self.step();
@@ -226,16 +233,6 @@ impl Console {
             _ => panic!("Invalid flag encountered"), 
         }
     }
-}
-
-pub struct Byte {
-    pub idx: u8,
-}
-pub struct Word {
-    pub idx: u8,
-}
-pub struct WordSTK {
-    pub idx: u8,
 }
 
 impl Index<Byte> for Console {

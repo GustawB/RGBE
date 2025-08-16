@@ -1,4 +1,4 @@
-use crate::types::*;
+use crate::{console::types::types::Byte, Console};
 
 fn ld_r8_r8(src: u8, dest: u8, console: &mut Console) {
     let src_val: u8 = console[Byte { idx: src }];

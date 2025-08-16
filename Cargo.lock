@@ -3,5 +3,9 @@
 version = 4
 
 [[package]]
-name = "RGBE"
+name = "rgbe"
+version = "0.1.0"
+
+[[package]]
+name = "rgbed"
 version = "0.1.0"

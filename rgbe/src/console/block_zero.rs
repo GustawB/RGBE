@@ -1,4 +1,4 @@
-use crate::{bit_ops::{carry, half_carry}, common::rotate_operand, constants::*, types::*};
+use crate::{console::{helpers::{bit_ops::{carry, half_carry}, common::rotate_operand, constants::{flag, A, EA, HL, SP}}, types::types::{BitFlag, Byte, Word, CARRY, LEFT, NO_CARRY, RIGHT}}, Console};
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
