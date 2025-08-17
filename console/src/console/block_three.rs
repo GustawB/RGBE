@@ -25,7 +25,7 @@ fn cp_a_r8(console: &mut Console) {
 
 fn ret(console: &mut Console) {
     let (low, high) = pop_low_high(console);
-    console.set_pc(low | (high << 8));
+    console.set_ip(low | (high << 8));
 }
 
 fn ret_cond(cc: u8, console: &mut Console) {
@@ -42,22 +42,22 @@ fn reti(console: &mut Console) {
 fn jp_cc_imm16(cc: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
     if console.is_condition_met(cc) {
-        console.set_pc(imm16);
+        console.set_ip(imm16);
     }
 }
 
 fn jp_imm16(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    console.set_pc(imm16);
+    console.set_ip(imm16);
 }
 
 fn jp_hl(console: &mut Console) {
     let hl_val: u16 = console[Word { idx: HL }];
-    console.set_pc(hl_val);
+    console.set_ip(hl_val);
 }
 
 fn setup_call(console: &mut Console) {
-    let next_instr_addr: u16 = console.get_pc();
+    let next_instr_addr: u16 = console.get_ip();
     console.stk_push((next_instr_addr & 0x00FF) as u8);
     console.stk_push((next_instr_addr >> 8) as u8);
 }
@@ -65,7 +65,7 @@ fn setup_call(console: &mut Console) {
 fn call_imm16(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
     setup_call(console);
-    console.set_pc(imm16);
+    console.set_ip(imm16);
 }
 
 fn call_cc_imm16(cc: u8, console: &mut Console) {
@@ -76,7 +76,7 @@ fn call_cc_imm16(cc: u8, console: &mut Console) {
 
 fn rst_tgt3(tgt3: u8, console: &mut Console) {
     setup_call(console);
-    console.set_pc(tgt3 as u16);
+    console.set_ip(tgt3 as u16);
 }
 
 fn pop_r16stk(r16stk: u8, console: &mut Console) {
@@ -225,6 +225,6 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
     } else if instr == 251 {
         ei(console);
     } else {
-        panic!("Invalid opcode for block three");
+        panic!("Invalid oipode for block three");
     }
 }

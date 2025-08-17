@@ -57,15 +57,15 @@ impl Console {
         ((b as u16) << 8) | a as u16 // Little endian garbage
     }
 
-    pub fn move_pc(&mut self, amount: u16) {
+    pub fn move_ip(&mut self, amount: u16) {
         unsafe { self.ip.value += amount };
     }
 
-    pub fn set_pc(&mut self, val: u16) {
+    pub fn set_ip(&mut self, val: u16) {
         self.ip.value = val;
     }
 
-    pub fn get_pc(&mut self) -> u16 {
+    pub fn get_ip(&mut self) -> u16 {
         unsafe { self.ip.value }
     }
 
@@ -96,17 +96,17 @@ impl Console {
                 _ => panic!("Invalid instruction"),
             };
         }
+
+        // TODO: inspect if this is not too soon
+        if self.pending_ei {
+            self.addr_bus[IME as usize] = 1;
+            self.pending_ei = false;
+        }
     }
 
     // Entry point of the console.
     pub fn execute(&mut self) {
-        loop {
-            self.step();
-            if self.pending_ei {
-                self.addr_bus[IME as usize] = 1;
-                self.pending_ei = false;
-            }
-        }
+        loop { self.step(); }
     }
 
     fn get_r8(&self, idx: u8) -> &u8 {
@@ -118,7 +118,7 @@ impl Console {
                 3 => &self.de.halves[0],
                 4 => &self.hl.halves[1],
                 5 => &self.hl.halves[0],
-                6 => &self.addr_bus[69],
+                6 => &self.addr_bus[self.hl.value as usize],
                 7 => &self.af.halves[1],
                 8 => &self.af.halves[0],
                 _ => panic!("Index out of range"),

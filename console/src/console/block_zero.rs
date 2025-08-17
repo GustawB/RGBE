@@ -122,7 +122,7 @@ fn ccf(console: &mut Console) {
 
 fn jr_imm8(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
-    console.move_pc(imm8 as u16);
+    console.move_ip(imm8 as u16);
 }
 
 fn jr_cc_imm8(cc: u8, console: &mut Console) {
@@ -181,7 +181,7 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
     } else if instr == 14 {
         stop(console);
     } else {
-        panic!("Unrecognized OPCode in block zero.");
+        panic!("Unrecognized Oipode in block zero.");
     }
     
 }
