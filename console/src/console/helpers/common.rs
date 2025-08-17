@@ -17,7 +17,6 @@ pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(operand: u8, console: &mut Cons
             console.clear_or_set_flag(carry::add_8(a_val - operand, operand), flag::C);
         },
         SUB_VAL => {
-            
             console.clear_or_set_flag(half_carry::sub_8(a_val + operand, operand), flag::H);
             console.clear_or_set_flag(carry::sub_8(a_val + operand, operand), flag::C);
         }, 
