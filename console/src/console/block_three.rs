@@ -10,9 +10,9 @@ fn pop_low_high(console: &mut Console) -> (u16, u16) {
     (low, high)
 }
 
-fn arithm_a_r8<OP: BitFlag, C: BitFlag>(console: &mut Console) {
+fn arithm_a_imm8<OP: BitFlag, C: BitFlag>(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
-    arithm_a_operand::<OP, C>(imm8, console);
+    arithm_a_operand::<OP, C>(imm8, console, reg8::MAX_REG8);
 }
 
 fn logic_a_imm8<OP: BitFlag>(console: &mut Console) {
@@ -102,7 +102,7 @@ fn rst_tgt3(tgt3: u8, console: &mut Console) {
     setup_call(console);
     console.set_ip(tgt3 as u16);
 
-    // TODO: add loggong
+    debug!("RST {tgt3}");
 }
 
 fn pop_r16stk(r16stk: u8, console: &mut Console) {
@@ -222,21 +222,21 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
     let r16stk: u8 = (instr << 2) >> 6;
 
     if instr == 198 {
-        arithm_a_r8::<ADD, NO_CARRY>(console);
+        arithm_a_imm8::<ADD, NO_CARRY>(console);
     } else if instr == 206 {
-        arithm_a_r8::<ADD, CARRY>(console);
+        arithm_a_imm8::<ADD, CARRY>(console);
     } else if instr == 214 {
-        arithm_a_r8::<SUB, NO_CARRY>(console);
+        arithm_a_imm8::<SUB, NO_CARRY>(console);
     } else if instr == 222 {
-        arithm_a_r8::<SUB, CARRY>(console);
+        arithm_a_imm8::<SUB, CARRY>(console);
     } else if instr == 230 {
-        logic_a_r8::<AND>(console);
+        logic_a_imm8::<AND>(console);
     } else if instr == 238 {
-        logic_a_r8::<XOR>(console);
+        logic_a_imm8::<XOR>(console);
     } else if instr == 246 {
-        logic_a_r8::<OR>(console);
+        logic_a_imm8::<OR>(console);
     } else if instr == 254 {
-        cp_a_r8(console);
+        cp_a_imm8(console);
     } else if instr & 0x18 == 192 {
         ret_cond(cc, console);
     } else if instr == 201 {

@@ -13,6 +13,8 @@ fn ld_r8_r8(src: u8, dest: u8, console: &mut Console) {
 
 fn halt(_console: &mut Console) {
     // TODO: implement
+
+    debug!("HALT");
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {

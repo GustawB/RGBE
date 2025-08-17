@@ -5,7 +5,7 @@ use log::debug;
 use crate::console::{helpers::{common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::reg8}, types::types::{BitFlag, Byte, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn arithm_a_r8<OP: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
-    arithm_a_operand::<OP, C>(console[Byte { idx: r8 }], console);
+    arithm_a_operand::<OP, C>(console[Byte { idx: r8 }], console, r8);
 }
 
 fn logic_a_r8<OP: BitFlag>(r8: u8, console: &mut Console) {

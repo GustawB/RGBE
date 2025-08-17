@@ -1,13 +1,43 @@
+use log::debug;
+
 use crate::console::{helpers::{bit_ops::{carry, half_carry}, constants::{flag, reg8}}, types::types::{BitFlag, Byte, ADD_VAL, AND_VAL, CARRY_VAL, LEFT_VAL, NO_CARRY_VAL, OR_VAL, RIGHT_VAL, SUB_VAL, XOR_VAL}, Console};
 
+fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: u8) {
+    let arg: String = match arg_type {
+        reg8::MAX_REG8 => format!("{operand}"),
+        _ => reg8::reg_to_name(arg_type),
+    };
 
-// TODO: use carry bruh
-pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(operand: u8, console: &mut Console) {
+    match OP::VALUE {
+        ADD_VAL => {
+            match C::VALUE {
+                CARRY_VAL => debug!("ADC A, {arg}"),
+                NO_CARRY_VAL => debug!("ADD A, {arg}"),
+                _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
+            }
+        },
+        SUB_VAL => {
+            match C::VALUE {
+                CARRY_VAL => debug!("SBC A, {arg}"),
+                NO_CARRY_VAL => debug!("ADD A, {arg}"),
+                _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
+            }
+        },
+        _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
+    }
+}
+
+pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut Console, arg_type: u8) {
+    log_arithm_a::<OP, C>(operand, arg_type);
+    if C::VALUE == CARRY_VAL && console.is_flag_set(flag::C) {
+        // If op with carry, like ADC, and Carry is set, increment the operand.
+        operand += 1;
+    }
     let mut a_val: u8 = console[Byte { idx: reg8::A }];
     match OP::VALUE {
         ADD_VAL => a_val += operand,
         SUB_VAL => a_val -= operand,
-        _ => panic!("Flag value out of range (possible values are: 0, 1)"),
+        _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
     }
 
     console.clear_or_set_flag(OP::VALUE == 0, flag::N);
@@ -20,7 +50,7 @@ pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(operand: u8, console: &mut Cons
             console.clear_or_set_flag(half_carry::sub_8(a_val + operand, operand), flag::H);
             console.clear_or_set_flag(carry::sub_8(a_val + operand, operand), flag::C);
         }, 
-        _ => panic!("Flag value out of range (possible values are: 0, 1)"),
+        _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
     }
     console.clear_or_set_flag(a_val == 0, flag::Z);
     *(&mut console[Byte { idx: reg8::A }]) = a_val;
@@ -32,7 +62,7 @@ pub fn logic_a_operand<OP: BitFlag>(operand: u8, console: &mut Console) {
         AND_VAL => a_val &= operand,
         XOR_VAL => a_val ^= operand,
         OR_VAL => a_val |= operand,
-        _ => panic!("Flag value out of range (possible values are: 2, 3, 4)"),
+        _ => panic!("Flag value out of range (possible values are: AND_VAL, XIOR_VAL, OR_VAL)"),
     }
 
     console.clear_or_set_flag(a_val == 0, flag::Z);
@@ -62,16 +92,36 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
         LEFT_VAL => {
             c = reg >> 7;
             match C::VALUE {
-                CARRY_VAL => reg = reg << 1 | c,
-                NO_CARRY_VAL => reg = reg << 1 | curr_c,
+                CARRY_VAL => {
+                    reg = reg << 1 | c;
+
+                    if r8 == reg8::EA { debug!("RLCA"); }
+                    else { debug!("RLC {}", reg8::reg_to_name(r8)); }
+                },
+                NO_CARRY_VAL => {
+                    reg = reg << 1 | curr_c;
+
+                    if r8 == reg8::EA { debug!("RLA"); }
+                    else { debug!("RL {}", reg8::reg_to_name(r8)); }
+                },
                 _ => panic!("Invalid carry"),
             }
         },
         RIGHT_VAL => {
             c = reg & 0x1;
             match C::VALUE {
-                CARRY_VAL => reg = reg >> 1 | c << 7,
-                NO_CARRY_VAL => reg = reg >> 1 | curr_c << 7,
+                CARRY_VAL => {
+                    reg = reg >> 1 | c << 7;
+
+                    if r8 == reg8::EA { debug!("RRCA"); }
+                    else { debug!("RRC {}", reg8::reg_to_name(r8)); }
+                },
+                NO_CARRY_VAL => {
+                    reg = reg >> 1 | curr_c << 7;
+
+                    if r8 == reg8::EA { debug!("RRA"); }
+                    else { debug!("RR {}", reg8::reg_to_name(r8)); }
+                },
                 _ => panic!("Invalid carry"),
             }
         },

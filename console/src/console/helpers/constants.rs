@@ -11,15 +11,16 @@ pub mod cond {
 pub mod reg8 {
     use core::panic;
 
-    pub const B: u8     = 0;
-    pub const C: u8     = 1;
-    pub const D: u8     = 2;
-    pub const E: u8     = 3;
-    pub const H: u8     = 4;
-    pub const L: u8     = 5;
-    pub const HL_ADDR: u8     = 6;
-    pub const A: u8     = 7;
-    pub const EA: u8                = 10; // Explicit A (instead of r8 value)
+    pub const B: u8                 = 0;
+    pub const C: u8                 = 1;
+    pub const D: u8                 = 2;
+    pub const E: u8                 = 3;
+    pub const H: u8                 = 4;
+    pub const L: u8                 = 5;
+    pub const HL_ADDR: u8           = 6;
+    pub const A: u8                 = 7;
+    pub const EA: u8               = 10; // Explicit A (instead of r8 value)
+    pub const MAX_REG8: u8         = 11;
 
     pub fn reg_to_name(reg: u8) -> String {
         match reg {

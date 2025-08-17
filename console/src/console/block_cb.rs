@@ -1,6 +1,8 @@
 use core::panic;
 
-use crate::console::{helpers::{common::rotate_operand, constants::flag}, types::types::{BitFlag, Byte, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
+use log::debug;
+
+use crate::console::{helpers::{common::rotate_operand, constants::{flag, reg8}}, types::types::{BitFlag, Byte, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
 
 fn rotate<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
     rotate_operand::<DIR, C>(r8, console);
@@ -33,6 +35,8 @@ fn swap_r8(r8: u8, console: &mut Console) {
     r8_val = r8_val << 4 | r8_val >> 4;
     console.clear_or_set_flag(r8_val == 0, flag::Z);
     *(&mut console[Byte { idx: r8 }]) = r8_val;
+
+    debug!("SWAP {}", reg8::reg_to_name(r8));
 }
 
 fn srl_r8(r8: u8, console: &mut Console) {
@@ -43,6 +47,8 @@ fn srl_r8(r8: u8, console: &mut Console) {
     console.clear_or_set_flag(r8_val == 0, flag::Z);
     console.clear_or_set_flag(c != 0, flag::Z);
     *(&mut console[Byte { idx: r8 }]) = r8_val;
+
+    debug!("SRL {}", reg8::reg_to_name(r8));
 }
 
 fn bit_b3_r8(b3: u8, r8: u8, console: &mut Console) {
@@ -50,16 +56,22 @@ fn bit_b3_r8(b3: u8, r8: u8, console: &mut Console) {
     console.clear_flag(flag::N);
     console.set_flag(flag::H);
     console.clear_or_set_flag(r8_val & 0x1 << b3 == 0, flag::Z);
+
+    debug!("BIT {b3}, {}", reg8::reg_to_name(r8));
 }
 
 fn res_b3_r8(b3: u8, r8: u8, console: &mut Console) {
     let r8_val: &mut u8 = &mut console[Byte { idx: r8 }];
     *r8_val &= !(0x1 << b3);
+
+    debug!("RES {b3}, {}", reg8::reg_to_name(r8));
 }
 
 fn set_b3_r8(b3: u8, r8: u8, console: &mut Console) {
     let r8_val: &mut u8 = &mut console[Byte { idx: r8 }];
     *r8_val |= 0x1 << b3;
+
+    debug!("SET {b3}, {}", reg8::reg_to_name(r8));
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {

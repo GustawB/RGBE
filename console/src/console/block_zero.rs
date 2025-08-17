@@ -94,8 +94,6 @@ fn ld_r8_imm8(r8: u8, console: &mut Console) {
 
 fn rotate_a<DIR: BitFlag, C: BitFlag>(console: &mut Console) {
     rotate_operand::<DIR, C>(reg8::EA, console);
-
-    // TODO: implement logging
 }
 
 fn daa(console: &mut Console) {
