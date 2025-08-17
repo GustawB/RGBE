@@ -1,6 +1,6 @@
 use core::panic;
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, A, C, HL, IME, SP}}, types::types::{BitFlag, Byte, Word, WordSTK, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, reg16, reg8, IME}}, types::types::{BitFlag, Byte, Word, WordSTK, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn pop_low_high(console: &mut Console) -> (u16, u16) {
     let low: u16 = console.stk_pop() as u16;
@@ -52,7 +52,7 @@ fn jp_imm16(console: &mut Console) {
 }
 
 fn jp_hl(console: &mut Console) {
-    let hl_val: u16 = console[Word { idx: HL }];
+    let hl_val: u16 = console[Word { idx: reg16::HL }];
     console.set_ip(hl_val);
 }
 
@@ -92,31 +92,31 @@ fn push_r16stk(r16stk: u8, console: &mut Console) {
 }
 
 fn ldh_c_a(console: &mut Console) {
-    let a_val: u8 = console[Byte { idx: A }];
-    let c_val: u8 = console[Byte { idx: C }];
+    let a_val: u8 = console[Byte { idx: reg8::A }];
+    let c_val: u8 = console[Byte { idx: reg8::C }];
     console.addr_bus[(0xFF00 + c_val as u16) as usize] = a_val;
 }
 
 fn ldh_imm8_a(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
-    let a_val: u8 = console[Byte { idx: A }];
+    let a_val: u8 = console[Byte { idx: reg8::A }];
     console.addr_bus[(0xFF00 + imm8 as u16) as usize] = a_val;
 }
 
 fn ld_imm16_a(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
-    let a_val: u8 = console[Byte { idx: A }];
+    let a_val: u8 = console[Byte { idx: reg8::A }];
     console.addr_bus[imm16 as usize] = a_val;
 }
 
 fn load_mem_into_a(addr: u16, console: &mut Console) {
     let addr_val: u8 = console.addr_bus[addr as usize];
-    let a_val: &mut u8 = &mut console[Byte { idx: A }];
+    let a_val: &mut u8 = &mut console[Byte { idx: reg8::A }];
     *a_val = addr_val;
 }
 
 fn ldh_a_c(console: &mut Console) {
-    let c_val: u8 = console[Byte { idx: C }];
+    let c_val: u8 = console[Byte { idx: reg8::C }];
     load_mem_into_a(0xFF00 + c_val as u16, console);
 }
 
@@ -133,22 +133,22 @@ fn ld_a_imm16(console: &mut Console) {
 fn add_sp_imm8(console: &mut Console) -> u16 {
     console.clear_flags(&[flag::Z, flag::N]);
     let imm8: u8 = console.fetch_byte();
-    let sp_val: u16 = console[Word { idx: SP }];
+    let sp_val: u16 = console[Word { idx: reg16::SP }];
     console.clear_or_set_flag(half_carry::add_16(sp_val, imm8 as u16), flag::H);
     console.clear_or_set_flag(carry::add_16(sp_val, imm8 as u16), flag::C);
-    *(&mut console[Word { idx: SP }]) = sp_val + imm8 as u16;
+    *(&mut console[Word { idx: reg16::SP }]) = sp_val + imm8 as u16;
     sp_val + imm8 as u16
 }
 
 fn ld_hl_sp_imm8(console: &mut Console) {
     let tmp: u16 = add_sp_imm8(console);
-    let hl_val: &mut u16 = &mut console[Word { idx: HL }];
+    let hl_val: &mut u16 = &mut console[Word { idx: reg16::HL }];
     *hl_val = tmp;
 }
 
 fn ld_sp_hl(console: &mut Console) {
-    let hl_val: u16 = console[Word { idx: HL }];
-    *(&mut console[Word { idx: SP }]) = hl_val;
+    let hl_val: u16 = console[Word { idx: reg16::HL }];
+    *(&mut console[Word { idx: reg16::SP }]) = hl_val;
 }
 
 fn di(console: &mut Console) {

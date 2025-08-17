@@ -17,48 +17,57 @@ pub trait BitFlag {
     const VALUE: u8;
 }
 
+pub const ADD_VAL: u8 = 0;
 pub struct ADD;
 impl BitFlag for ADD {
-    const VALUE: u8 = 0;
+    const VALUE: u8 = ADD_VAL;
 }
 
+pub const SUB_VAL: u8 = 1;
 pub struct SUB;
 impl BitFlag for SUB {
-    const VALUE: u8 = 1;
+    const VALUE: u8 = SUB_VAL;
 }
 
+pub const AND_VAL: u8 = 2;
 pub struct AND;
 impl BitFlag for AND {
-    const VALUE: u8 = 2;
+    const VALUE: u8 = AND_VAL;
 }
 
+pub const XOR_VAL: u8 = 3;
 pub struct XOR;
 impl BitFlag for XOR {
-    const VALUE: u8 = 3;
+    const VALUE: u8 = XOR_VAL;
 }
 
+pub const OR_VAL: u8 = 4;
 pub struct OR;
 impl BitFlag for OR {
-    const VALUE: u8 = 4;
+    const VALUE: u8 = OR_VAL;
 }
 
+pub const CARRY_VAL: u8 = 0;
 pub struct CARRY;
 impl BitFlag for CARRY {
-    const VALUE: u8 = 0;
+    const VALUE: u8 = CARRY_VAL;
 }
 
+pub const NO_CARRY_VAL: u8 = 1;
 #[allow(non_camel_case_types)]
 pub struct NO_CARRY;
 impl BitFlag for NO_CARRY {
-    const VALUE: u8 = 1;
+    const VALUE: u8 = NO_CARRY_VAL;
 }
 
+pub const LEFT_VAL: u8 = 0;
 pub struct LEFT;
 impl BitFlag for LEFT {
-    const VALUE: u8 = 0;
+    const VALUE: u8 = LEFT_VAL;
 }
 
+pub const RIGHT_VAL: u8 = 1;
 pub struct RIGHT;
 impl BitFlag for RIGHT {
-    const VALUE: u8 = 1;
+    const VALUE: u8 = RIGHT_VAL;
 }

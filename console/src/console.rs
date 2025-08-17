@@ -9,7 +9,7 @@ mod block_three;
 
 use std::ops::{Index, IndexMut};
 
-use crate::console::{helpers::constants::{cond, flag, ADDR_BUS_SIZE, IME, SP}, types::types::{Byte, Register, Word, WordSTK}};
+use crate::console::{helpers::constants::{cond, flag, reg16, reg16stk, reg8, ADDR_BUS_SIZE, IME}, types::types::{Byte, Register, Word, WordSTK}};
 
 pub struct Console {
     pub addr_bus: [u8; ADDR_BUS_SIZE],
@@ -70,13 +70,13 @@ impl Console {
     }
 
     pub fn stk_push(&mut self, val: u8) {
-        let sp_val: &mut u16 = &mut self[Word { idx: SP }];
+        let sp_val: &mut u16 = &mut self[Word { idx: reg16::SP }];
         *sp_val -= 1;
         self.addr_bus[*sp_val as usize] = val;
     }
 
     pub fn stk_pop(&mut self) -> u8 {
-        let sp_val: &mut u16 = &mut self[Word { idx: SP }];
+        let sp_val: &mut u16 = &mut self[Word { idx: reg16::SP }];
         *sp_val += 1;
         self.addr_bus[*sp_val as usize]
     }
@@ -92,7 +92,7 @@ impl Console {
                 0 => block_zero::dispatch(bt, self),
                 1 => block_one::dispatch(bt, self),
                 2 => block_two::dispatch(bt, self),
-                3=>  block_three::dispatch(bt, self),
+                3 => block_three::dispatch(bt, self),
                 _ => panic!("Invalid instruction"),
             };
         }
@@ -112,15 +112,14 @@ impl Console {
     fn get_r8(&self, idx: u8) -> &u8 {
         unsafe {
             match idx {
-                0 => &self.bc.halves[1],
-                1 => &self.bc.halves[0],
-                2 => &self.de.halves[1],
-                3 => &self.de.halves[0],
-                4 => &self.hl.halves[1],
-                5 => &self.hl.halves[0],
-                6 => &self.addr_bus[self.hl.value as usize],
-                7 => &self.af.halves[1],
-                8 => &self.af.halves[0],
+                reg8::B => &self.bc.halves[1],
+                reg8::C => &self.bc.halves[0],
+                reg8::D => &self.de.halves[1],
+                reg8::E => &self.de.halves[0],
+                reg8::H => &self.hl.halves[1],
+                reg8::L => &self.hl.halves[0],
+                reg8::HL_ADDR => &self.addr_bus[self.hl.value as usize],
+                reg8::A => &self.af.halves[1],
                 _ => panic!("Index out of range"),
             }
         }
@@ -129,15 +128,14 @@ impl Console {
     fn get_r8_mut(&mut self, idx: u8) -> &mut u8 {
         unsafe {
             match idx {
-                0 => &mut self.bc.halves[1],
-                1 => &mut self.bc.halves[0],
-                2 => &mut self.de.halves[1],
-                3 => &mut self.de.halves[0],
-                4 => &mut self.hl.halves[1],
-                5 => &mut self.hl.halves[0],
-                6 => &mut self.addr_bus[self.hl.value as usize],
-                7 => &mut self.af.halves[1],
-                8 => &mut self.af.halves[0],
+                reg8::B => &mut self.bc.halves[1],
+                reg8::C => &mut self.bc.halves[0],
+                reg8::D => &mut self.de.halves[1],
+                reg8::E => &mut self.de.halves[0],
+                reg8::H => &mut self.hl.halves[1],
+                reg8::L => &mut self.hl.halves[0],
+                reg8::HL_ADDR => &mut self.addr_bus[self.hl.value as usize],
+                reg8::A => &mut self.af.halves[1],
                 _ => panic!("Index out of range"),
             }
         }
@@ -146,10 +144,10 @@ impl Console {
     fn get_r16(&self, idx: u8) -> &u16 {
         unsafe {
             match idx {
-                0 => &self.bc.value,
-                1 => &self.de.value,
-                2 => &self.hl.value,
-                3 => &self.sp.value,
+                reg16::BC => &self.bc.value,
+                reg16::DE => &self.de.value,
+                reg16::HL => &self.hl.value,
+                reg16::SP => &self.sp.value,
                 _ => panic!("Index out of range"),
             }
         }
@@ -158,10 +156,10 @@ impl Console {
     fn get_r16_mut(&mut self, idx: u8) -> &mut u16 {
         unsafe {
             match idx {
-                0 => &mut self.bc.value,
-                1 => &mut self.de.value,
-                2 => &mut self.hl.value,
-                3 => &mut self.sp.value,
+                reg16::BC => &mut self.bc.value,
+                reg16::DE => &mut self.de.value,
+                reg16::HL => &mut self.hl.value,
+                reg16::SP => &mut self.sp.value,
                 _ => panic!("Index out of range"),
             }
         }
@@ -170,10 +168,10 @@ impl Console {
     fn get_r16stk(&self, idx: u8) -> &u16 {
         unsafe {
             match idx {
-                0 => &self.bc.value,
-                1 => &self.de.value,
-                2 => &self.hl.value,
-                3 => &self.af.value,
+                reg16stk::BC => &self.bc.value,
+                reg16stk::DE => &self.de.value,
+                reg16stk::HL => &self.hl.value,
+                reg16stk::AF => &self.af.value,
                 _ => panic!("Index out of range")
             }
         }
@@ -182,10 +180,10 @@ impl Console {
     fn get_r16stk_mut(&mut self, idx: u8) -> &mut u16 {
         unsafe {
             match idx {
-                0 => &mut self.bc.value,
-                1 => &mut self.de.value,
-                2 => &mut self.hl.value,
-                3 => &mut self.af.value,
+                reg16stk::BC => &mut self.bc.value,
+                reg16stk::DE => &mut self.de.value,
+                reg16stk::HL => &mut self.hl.value,
+                reg16stk::AF => &mut self.af.value,
                 _ => panic!("Index out of range")
             }
         }

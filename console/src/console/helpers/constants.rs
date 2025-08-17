@@ -1,19 +1,75 @@
 pub const ADDR_BUS_SIZE: usize  = 65535;
+pub const IME: u16              = 0xFFFE;
 
 pub mod cond {
-    pub const NZ: u8 = 0;
-    pub const Z: u8 = 1;
-    pub const NC: u8 = 2;
-    pub const C: u8 = 3;    
+    pub const NZ: u8    = 0;
+    pub const Z: u8     = 1;
+    pub const NC: u8    = 2;
+    pub const C: u8     = 3;    
 }
 
-pub const SP: u8                = 3;
-pub const HL: u8                = 2;
-pub const A: u8                 = 7;
-pub const EA: u8                = 10; // Explicit A (instead of r8 value)
-pub const C: u8                 = 1;
+pub mod reg8 {
+    use core::panic;
 
-pub const IME: u16              = 0xFFFE;
+    pub const B: u8     = 0;
+    pub const C: u8     = 1;
+    pub const D: u8     = 2;
+    pub const E: u8     = 3;
+    pub const H: u8     = 4;
+    pub const L: u8     = 5;
+    pub const HL_ADDR: u8     = 6;
+    pub const A: u8     = 7;
+    pub const EA: u8                = 10; // Explicit A (instead of r8 value)
+
+    pub fn reg_to_name(reg: u8) -> String {
+        match reg {
+            B => "B".to_string(),
+            C => "C".to_string(),
+            D => "D".to_string(),
+            E => "E".to_string(),
+            H => "H".to_string(),
+            L => "L".to_string(),
+            HL_ADDR => "[HL]".to_string(),
+            A => "A".to_string(),
+            EA => "A".to_string(),
+            _ => panic!("Unrecognized BYTE register"),
+        }
+    }
+}
+
+pub mod reg16 {
+    pub const BC: u8    = 0;
+    pub const DE: u8    = 1;
+    pub const HL: u8    = 2;
+    pub const SP: u8    = 3;
+
+    pub fn reg_to_name(reg: u8) -> String {
+        match reg {
+            BC => "BC".to_string(),
+            DE => "DE".to_string(),
+            HL => "HL".to_string(),
+            SP => "SP".to_string(),
+            _ => panic!("Unrecognized WORD register"),
+        }
+    }
+}
+
+pub mod reg16stk {
+    pub const BC: u8    = 0;
+    pub const DE: u8    = 1;
+    pub const HL: u8    = 2;
+    pub const AF: u8    = 3;
+
+    pub fn reg_to_name(reg: u8) -> String {
+        match reg {
+            BC => "BC".to_string(),
+            DE => "DE".to_string(),
+            HL => "HL".to_string(),
+            AF => "AF".to_string(),
+            _ => panic!("Unrecognized WORD register"),
+        }
+    }
+}
 
 pub mod flag {
     pub const Z: u8                 = 0x80;
