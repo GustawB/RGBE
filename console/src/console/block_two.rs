@@ -1,8 +1,6 @@
 use core::panic;
 
-use log::debug;
-
-use crate::console::{helpers::{common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::reg8}, types::types::{BitFlag, Byte, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
+use crate::console::{helpers::{common::{arithm_a_operand, cp_a_operand, debug_addr, logic_a_operand}, constants::reg8}, types::types::{BitFlag, Byte, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn arithm_a_r8<OP: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
     arithm_a_operand::<OP, C>(console[Byte { idx: r8 }], console, r8);
@@ -11,13 +9,13 @@ fn arithm_a_r8<OP: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
 fn logic_a_r8<OP: BitFlag>(r8: u8, console: &mut Console) {
     logic_a_operand::<OP>(console[Byte { idx: r8 }], console);
 
-    debug!("{} A, {}", OP::to_string(), reg8::reg_to_name(r8));
+    debug_addr(console, format!("{} A, {}", OP::to_string(), reg8::reg_to_name(r8)));
 }
 
 fn cp_a_r8(r8: u8, console: &mut Console) {
     cp_a_operand(console[Byte { idx: r8 }], console);
 
-    debug!("CP A, {}", reg8::reg_to_name(r8));
+    debug_addr(console, format!("CP A, {}", reg8::reg_to_name(r8)));
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {

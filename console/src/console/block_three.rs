@@ -1,8 +1,6 @@
 use core::panic;
 
-use log::debug;
-
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{flag, reg16, reg16stk, reg8, IME}}, types::types::{BitFlag, Byte, Word, WordSTK, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, debug_addr, logic_a_operand}, constants::{flag, reg16, reg16stk, reg8, IME}}, types::types::{BitFlag, Byte, Word, WordSTK, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn pop_low_high(console: &mut Console) -> (u16, u16) {
     let low: u16 = console.stk_pop() as u16;
@@ -19,21 +17,21 @@ fn logic_a_imm8<OP: BitFlag>(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
     logic_a_operand::<OP>(imm8, console);
 
-    debug!("{} A, {}", OP::to_string(), imm8);
+    debug_addr(console, format!("{} A, 0x{:04X}", OP::to_string(), imm8));
 }
 
 fn cp_a_imm8(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
     cp_a_operand(imm8, console);
 
-    debug!("CP A, {}", imm8);
+    debug_addr(console, format!("CP A, 0x{:04X}", imm8));
 }
 
 fn ret(console: &mut Console) {
     let (low, high) = pop_low_high(console);
     console.set_ip(low | (high << 8));
 
-    debug!("RET");
+    debug_addr(console, format!("RET"));
 }
 
 fn ret_cond(cc: u8, console: &mut Console) {
@@ -41,14 +39,14 @@ fn ret_cond(cc: u8, console: &mut Console) {
         ret(console);
     }
 
-    debug!("RET cc");
+    debug_addr(console, format!("RET cc"));
 }
 
 fn reti(console: &mut Console) {
     ret(console);
     console.addr_bus[IME as usize] = 1;
 
-    debug!("RETI");
+    debug_addr(console, format!("RETI"));
 }
 
 fn jp_cc_imm16(cc: u8, console: &mut Console) {
@@ -57,21 +55,21 @@ fn jp_cc_imm16(cc: u8, console: &mut Console) {
         console.set_ip(imm16);
     }
 
-    debug!("JP CC, {imm16}");
+    debug_addr(console, format!("JP CC, {imm16}"));
 }
 
 fn jp_imm16(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
     console.set_ip(imm16);
 
-    debug!("JP {imm16}");
+    debug_addr(console, format!("JP {imm16}"));
 }
 
 fn jp_hl(console: &mut Console) {
     let hl_val: u16 = console[Word { idx: reg16::HL }];
     console.set_ip(hl_val);
 
-    debug!("JP HL");
+    debug_addr(console, format!("JP HL"));
 }
 
 fn setup_call(console: &mut Console) {
@@ -85,7 +83,7 @@ fn call_imm16(console: &mut Console) {
     setup_call(console);
     console.set_ip(imm16);
 
-    debug!("CALL {imm16}");
+    debug_addr(console, format!("CALL {imm16}"));
 }
 
 fn call_cc_imm16(cc: u8, console: &mut Console) {
@@ -95,14 +93,14 @@ fn call_cc_imm16(cc: u8, console: &mut Console) {
         console.set_ip(imm16);
     }
 
-    debug!("CALL cc, {imm16}");
+    debug_addr(console, format!("CALL cc, {imm16}"));
 }
 
 fn rst_tgt3(tgt3: u8, console: &mut Console) {
     setup_call(console);
     console.set_ip(tgt3 as u16);
 
-    debug!("RST {tgt3}");
+    debug_addr(console, format!("RST {tgt3}"));
 }
 
 fn pop_r16stk(r16stk: u8, console: &mut Console) {
@@ -110,7 +108,7 @@ fn pop_r16stk(r16stk: u8, console: &mut Console) {
     let reg: &mut u16 = &mut console[WordSTK { idx: r16stk }];
     *reg = low | (high << 8);
 
-    debug!("POP {}", reg16stk::reg_to_name(r16stk));
+    debug_addr(console, format!("POP {}", reg16stk::reg_to_name(r16stk)));
 }
 
 fn push_r16stk(r16stk: u8, console: &mut Console) {
@@ -118,7 +116,7 @@ fn push_r16stk(r16stk: u8, console: &mut Console) {
     console.stk_push((val >> 8) as u8);
     console.stk_push((val & 0x00FF) as u8);
 
-    debug!("PUSH {}", reg16stk::reg_to_name(r16stk));
+    debug_addr(console, format!("PUSH {}", reg16stk::reg_to_name(r16stk)));
 }
 
 fn ldh_c_a(console: &mut Console) {
@@ -126,7 +124,7 @@ fn ldh_c_a(console: &mut Console) {
     let c_val: u8 = console[Byte { idx: reg8::C }];
     console.addr_bus[(0xFF00 + c_val as u16) as usize] = a_val;
 
-    debug!("LDH C, A");
+    debug_addr(console, format!("LDH C, A"));
 }
 
 fn ldh_imm8_a(console: &mut Console) {
@@ -134,7 +132,7 @@ fn ldh_imm8_a(console: &mut Console) {
     let a_val: u8 = console[Byte { idx: reg8::A }];
     console.addr_bus[(0xFF00 + imm8 as u16) as usize] = a_val;
 
-    debug!("LDH [{imm8}], A");
+    debug_addr(console, format!("LDH [{imm8}], A"));
 }
 
 fn ld_imm16_a(console: &mut Console) {
@@ -142,7 +140,7 @@ fn ld_imm16_a(console: &mut Console) {
     let a_val: u8 = console[Byte { idx: reg8::A }];
     console.addr_bus[imm16 as usize] = a_val;
 
-    debug!("LD [{imm16}], A");
+    debug_addr(console, format!("LD [{imm16}], A"));
 }
 
 fn load_mem_into_a(addr: u16, console: &mut Console) {
@@ -155,21 +153,21 @@ fn ldh_a_c(console: &mut Console) {
     let c_val: u8 = console[Byte { idx: reg8::C }];
     load_mem_into_a(0xFF00 + c_val as u16, console);
 
-    debug!("LDH A, C");
+    debug_addr(console, format!("LDH A, C"));
 }
 
 fn ldh_a_imm8(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
     load_mem_into_a(0xFF00 + imm8 as u16, console);
 
-    debug!("LDH A, {imm8}");
+    debug_addr(console, format!("LDH A, {imm8}"));
 }
 
 fn ld_a_imm16(console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
     load_mem_into_a(imm16, console);
 
-    debug!("LD A, {imm16}");
+    debug_addr(console, format!("LD A, {imm16}"));
 }
 
 fn add_sp_imm8_logless(console: &mut Console, imm8: u8) -> u16 {
@@ -185,7 +183,7 @@ fn add_sp_imm8(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
     add_sp_imm8_logless(console, imm8);
 
-    debug!("ADD SP, {imm8}");
+    debug_addr(console, format!("ADD SP, {imm8}"));
 }
 
 fn ld_hl_sp_imm8(console: &mut Console) {
@@ -194,26 +192,26 @@ fn ld_hl_sp_imm8(console: &mut Console) {
     let hl_val: &mut u16 = &mut console[Word { idx: reg16::HL }];
     *hl_val = tmp;
 
-    debug!("LD HL, SP+{imm8}")
+    debug_addr(console, format!("LD HL, SP+{imm8}"));
 }
 
 fn ld_sp_hl(console: &mut Console) {
     let hl_val: u16 = console[Word { idx: reg16::HL }];
     *(&mut console[Word { idx: reg16::SP }]) = hl_val;
 
-    debug!("LD SP, HL");
+    debug_addr(console, format!("LD SP, HL"));
 }
 
 fn di(console: &mut Console) {
     console.addr_bus[IME as usize] = 0;
 
-    debug!("DI");
+    debug_addr(console, format!("DI"));
 }
 
 fn ei(console: &mut Console) {
     console.pending_ei = true;
 
-    debug!("EI");
+    debug_addr(console, format!("EI"));
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {

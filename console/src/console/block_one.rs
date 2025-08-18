@@ -1,20 +1,18 @@
-use log::debug;
-
-use crate::console::{helpers::constants::reg8, types::types::Byte, Console};
+use crate::console::{helpers::{common::debug_addr, constants::reg8}, types::types::Byte, Console};
 
 fn ld_r8_r8(src: u8, dest: u8, console: &mut Console) {
     let src_val: u8 = console[Byte { idx: src }];
     let dest_val: &mut u8 = &mut console[Byte { idx: dest }];
     *dest_val = src_val;
 
-    debug!("LD {}, {}", reg8::reg_to_name(dest), reg8::reg_to_name(src));
+    debug_addr(console, format!("LD {}, {}", reg8::reg_to_name(dest), reg8::reg_to_name(src)));
 }
 
 
-fn halt(_console: &mut Console) {
+fn halt(console: &mut Console) {
     // TODO: implement
 
-    debug!("HALT");
+    debug_addr(console, format!("HALT"));
 }
 
 pub fn dispatch(instr: u8, console: &mut Console) -> () {

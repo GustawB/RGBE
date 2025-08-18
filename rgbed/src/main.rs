@@ -2,8 +2,9 @@ use core::panic;
 use std::env;
 use std::fs::read;
 use std::collections::HashMap;
-
+use env_logger::Env;
 use text_io::read;
+use std::io::Write;
 
 use console::Console;
 
@@ -35,16 +36,17 @@ impl Debugger {
         loop {
             let cmd: char = read!();
             match cmd {
-                actions::RUN => unimplemented!(),
+                actions::RUN => self.run_debugger(),
                 actions::SET_BREAK => self.set_break(),
                 actions::STEP => self.step(),
                 actions::EXIT => break,
-                _ => panic!("Unknown debug command"),
+                _ => println!("Unknown debug command"),
             };
         }
     }
 
     fn run_debugger(&mut self) {
+        self.started = true;
         loop {
             let ip: u16 = self.console.get_ip(); 
             match self.breakpoints.get(&ip) {
@@ -87,8 +89,24 @@ fn main() {
     let filename: &String = &args[1];
     
     let boot_rom: Vec<u8> = read(filename).expect("Failed to read the boot rom");
-    let mut console: Console = match Console::init(boot_rom) {
+    let console: Console = match Console::init(boot_rom) {
         Ok(c) => c,
         Err(msg) => panic!("Failed to create Console: {msg}")
     };
+
+
+    let env = Env::default()
+        .filter_or("MY_LOG_LEVEL", "debug");
+    env_logger::Builder::from_env(env).format(|buf, record| {
+            writeln!(
+                buf,
+                "[{} {}] {}",
+                record.level(),
+                record.target(),
+                record.args()
+            )
+        }).init();
+
+    let mut debugger: Debugger = Debugger::init(console);
+    debugger.run();
 }

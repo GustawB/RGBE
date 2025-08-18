@@ -2,7 +2,7 @@ use log::debug;
 
 use crate::console::{helpers::{bit_ops::{carry, half_carry}, constants::{flag, reg8}}, types::types::{BitFlag, Byte, ADD_VAL, AND_VAL, CARRY_VAL, LEFT_VAL, NO_CARRY_VAL, OR_VAL, RIGHT_VAL, SUB_VAL, XOR_VAL}, Console};
 
-fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: u8) {
+fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &Console, operand: u8, arg_type: u8) {
     let arg: String = match arg_type {
         reg8::MAX_REG8 => format!("{operand}"),
         _ => reg8::reg_to_name(arg_type),
@@ -11,24 +11,29 @@ fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: u8) {
     match OP::VALUE {
         ADD_VAL => {
             match C::VALUE {
-                CARRY_VAL => debug!("ADC A, {arg}"),
-                NO_CARRY_VAL => debug!("ADD A, {arg}"),
+                CARRY_VAL =>debug_addr(console, format!("ADC A, {arg}")),
+                NO_CARRY_VAL => debug_addr(console, format!("ADD A, {arg}")),
                 _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
             }
         },
         SUB_VAL => {
             match C::VALUE {
-                CARRY_VAL => debug!("SBC A, {arg}"),
-                NO_CARRY_VAL => debug!("ADD A, {arg}"),
+                CARRY_VAL => debug_addr(console, format!("SBC A, {arg}")),
+                NO_CARRY_VAL => debug_addr(console, format!("ADD A, {arg}")),
                 _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
             }
         },
         _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
-    }
+    };
+}
+
+#[inline(always)]
+pub fn debug_addr(console: &Console, expr: String) {
+    debug!("0x{:04X}: {expr}", console.get_ip());
 }
 
 pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut Console, arg_type: u8) {
-    log_arithm_a::<OP, C>(operand, arg_type);
+    log_arithm_a::<OP, C>(console, operand, arg_type);
     if C::VALUE == CARRY_VAL && console.is_flag_set(flag::C) {
         // If op with carry, like ADC, and Carry is set, increment the operand.
         operand += 1;
@@ -95,14 +100,14 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
                 CARRY_VAL => {
                     reg = reg << 1 | c;
 
-                    if r8 == reg8::EA { debug!("RLCA"); }
-                    else { debug!("RLC {}", reg8::reg_to_name(r8)); }
+                    if r8 == reg8::EA { debug_addr(console, format!("RLCA")); }
+                    else { debug_addr(console, format!("RLC {}", reg8::reg_to_name(r8))); }
                 },
                 NO_CARRY_VAL => {
                     reg = reg << 1 | curr_c;
 
-                    if r8 == reg8::EA { debug!("RLA"); }
-                    else { debug!("RL {}", reg8::reg_to_name(r8)); }
+                    if r8 == reg8::EA { debug_addr(console, format!("RLA")); }
+                    else { debug_addr(console, format!("RL {}", reg8::reg_to_name(r8))); }
                 },
                 _ => panic!("Invalid carry"),
             }
@@ -113,14 +118,14 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
                 CARRY_VAL => {
                     reg = reg >> 1 | c << 7;
 
-                    if r8 == reg8::EA { debug!("RRCA"); }
-                    else { debug!("RRC {}", reg8::reg_to_name(r8)); }
+                    if r8 == reg8::EA { debug_addr(console, format!("RRCA")); }
+                    else { debug_addr(console, format!("RRC {}", reg8::reg_to_name(r8))); }
                 },
                 NO_CARRY_VAL => {
                     reg = reg >> 1 | curr_c << 7;
 
-                    if r8 == reg8::EA { debug!("RRA"); }
-                    else { debug!("RR {}", reg8::reg_to_name(r8)); }
+                    if r8 == reg8::EA { debug_addr(console, format!("RRA")); }
+                    else { debug_addr(console, format!("RR {}", reg8::reg_to_name(r8))); }
                 },
                 _ => panic!("Invalid carry"),
             }

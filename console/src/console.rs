@@ -65,7 +65,7 @@ impl Console {
         self.ip.value = val;
     }
 
-    pub fn get_ip(&mut self) -> u16 {
+    pub fn get_ip(&self) -> u16 {
         unsafe { self.ip.value }
     }
 

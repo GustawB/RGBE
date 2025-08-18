@@ -72,6 +72,7 @@ name = "console"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "log",
 ]
 
 [[package]]
@@ -220,6 +221,7 @@ version = "0.1.0"
 dependencies = [
  "console",
  "env_logger",
+ "log",
  "text_io",
 ]
 
