@@ -1,4 +1,4 @@
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{debug_addr, rotate_operand}, constants::{flag, reg16, reg8}}, types::types::{BitFlag, Byte, Word, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{debug_addr, rotate_operand}, constants::{cond, flag, reg16, reg16mem, reg8}}, types::types::{BitFlag, Byte, Word, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
 
 fn ld_r16_imm16(r16: u8, console: &mut Console) {
     let imm16: u16 = console.fetch_two_bytes();
@@ -9,20 +9,20 @@ fn ld_r16_imm16(r16: u8, console: &mut Console) {
 }
 
 fn ld_r16mem_a(r16: u8, console: &mut Console) {
+    let r16mem_val: u16 = console.get_r16mem(r16);
     let a_val: &u8 = &console[Byte { idx: reg8::A }];
-    let r16_val: u16 = console[Word { idx: r16 }];
-    console.addr_bus[r16_val as usize] = *a_val;
+    console.addr_bus[r16mem_val as usize] = *a_val;
 
-    debug_addr(console, format!("LD {}, A", reg16::reg_to_name(r16)));
+    debug_addr(console, format!("LD [{}], A", reg16mem::reg_to_name(r16)));
 }
 
-fn ld_a_r16mm(r16: u8, console: &mut Console) {
-    let r16_val: u16 = console[Word { idx: r16 }];
+fn ld_a_r16mem(r16: u8, console: &mut Console) {
+    let r16_val: u16 = console.get_r16mem(r16);
     let addr_bus_val: u8 = console.addr_bus[r16_val as usize];
     let a_val: &mut u8 = &mut console[Byte { idx: reg8::A }];
     *a_val = addr_bus_val;
 
-    debug_addr(console, format!("LD A, {}", reg16::reg_to_name(r16)));
+    debug_addr(console, format!("LD A, [{}]", reg16mem::reg_to_name(r16)));
 }
 
 fn ld_imm16_sp(console: &mut Console) {
@@ -152,7 +152,7 @@ fn jr_imm8(console: &mut Console) {
     let imm8: u8 = console.fetch_byte();
     console.move_ip(imm8 as u16);
 
-    debug_addr(console, format!("JR {imm8}"));
+    debug_addr(console, format!("JR 0x{:04X}", imm8));
 }
 
 fn jr_cc_imm8(cc: u8, console: &mut Console) {
@@ -161,7 +161,7 @@ fn jr_cc_imm8(cc: u8, console: &mut Console) {
         console.move_ip(imm8 as u16);
     }
 
-    debug_addr(console, format!("JR {imm8}"));
+    debug_addr(console, format!("JR {}, 0x{:04X}", cond::get_cond_name(cc), imm8));
 }
 
 fn stop(console: &mut Console) {
@@ -178,7 +178,7 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
     } else if instr & 0x0F == 2 {
         ld_r16mem_a(op, console);
     } else if instr & 0x0F == 10 {
-        ld_a_r16mm(op, console);
+        ld_a_r16mem(op, console);
     } else if instr == 8 {
         ld_imm16_sp(console);
     } else if instr & 0x0F == 3 {
@@ -216,7 +216,7 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
     } else if instr == 14 {
         stop(console);
     } else {
-        panic!("Unrecognized Oipode in block zero.");
+        panic!("Invalid opcode in block zero.");
     }
     
 }

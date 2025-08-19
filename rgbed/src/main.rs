@@ -100,9 +100,8 @@ fn main() {
     env_logger::Builder::from_env(env).format(|buf, record| {
             writeln!(
                 buf,
-                "[{} {}] {}",
+                "[{}] {}",
                 record.level(),
-                record.target(),
                 record.args()
             )
         }).init();

@@ -99,6 +99,6 @@ pub fn dispatch(instr: u8, console: &mut Console) -> () {
     } else if instr >> 6 == 3 {
         set_b3_r8(b3, r8, console);
     } else {
-        panic!("Invalid opcode for block three");
+        panic!("Invalid opcode in block cb");
     }
 }

@@ -9,7 +9,7 @@ mod block_three;
 
 use std::ops::{Index, IndexMut};
 
-use crate::console::{helpers::constants::{cond, flag, reg16, reg16stk, reg8, ADDR_BUS_SIZE, IME}, types::types::{Byte, Register, Word, WordSTK}};
+use crate::console::{helpers::constants::{cond, flag, reg16, reg16mem, reg16stk, reg8, ADDR_BUS_SIZE, IME}, types::types::{Byte, Register, Word, WordSTK}};
 
 pub struct Console {
     pub addr_bus: [u8; ADDR_BUS_SIZE],
@@ -84,8 +84,9 @@ impl Console {
     // Process one instruction. Exposed outside mostly for the debugger
     pub fn step(&mut self) {
         let bt = self.fetch_byte();
-        if bt == 0xCD {
-            block_cb::dispatch(bt, self);
+        if bt == 0xCB {
+            let bt_instr: u8 = self.fetch_byte();
+            block_cb::dispatch(bt_instr, self);
         }
         else {
             match bt >> 6 {
@@ -185,6 +186,24 @@ impl Console {
                 reg16stk::HL => &mut self.hl.value,
                 reg16stk::AF => &mut self.af.value,
                 _ => panic!("Index out of range")
+            }
+        }
+    }
+
+    pub fn get_r16mem(&mut self, idx: u8) -> u16 {
+        unsafe {
+            match idx {
+                reg16mem::BC => self.bc.value,
+                reg16mem::DE => self.de.value,
+                reg16mem::HLI => {
+                    self.hl.value += 1;
+                    self.hl.value - 1
+                },
+                reg16mem::HLD => {
+                    self.hl.value -= 1;
+                    self.af.value + 1
+                },
+                _ => panic!("Index out of range"),
             }
         }
     }

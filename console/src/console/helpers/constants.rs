@@ -5,7 +5,17 @@ pub mod cond {
     pub const NZ: u8    = 0;
     pub const Z: u8     = 1;
     pub const NC: u8    = 2;
-    pub const C: u8     = 3;    
+    pub const C: u8     = 3;
+
+    pub fn get_cond_name(cc: u8) -> String {
+        match cc {
+            NZ => "NZ".to_string(),
+            Z => "Z".to_string(),
+            NC => "NC".to_string(),
+            C => "C".to_string(),
+            _ => panic!("Invalid condition code"),
+        }
+    }   
 }
 
 pub mod reg8 {
@@ -67,6 +77,23 @@ pub mod reg16stk {
             DE => "DE".to_string(),
             HL => "HL".to_string(),
             AF => "AF".to_string(),
+            _ => panic!("Unrecognized WORD register"),
+        }   
+    }
+}
+
+pub mod reg16mem {
+    pub const BC: u8    = 0;
+    pub const DE: u8    = 1;
+    pub const HLI: u8    = 2;
+    pub const HLD: u8    = 3;
+
+    pub fn reg_to_name(reg: u8) -> String {
+        match reg {
+            BC => "BC".to_string(),
+            DE => "DE".to_string(),
+            HLI => "HLI".to_string(),
+            HLD => "HLD".to_string(),
             _ => panic!("Unrecognized WORD register"),
         }
     }
