@@ -2,7 +2,7 @@ use log::debug;
 
 use crate::console::{helpers::{bit_ops::{carry, half_carry}, constants::{flag, reg8}}, types::types::{BitFlag, Byte, ADD_VAL, AND_VAL, CARRY_VAL, LEFT_VAL, NO_CARRY_VAL, OR_VAL, RIGHT_VAL, SUB_VAL, XOR_VAL}, Console};
 
-fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &Console, operand: u8, arg_type: u8) {
+fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: u8, curr_ip: u16) {
     let arg: String = match arg_type {
         reg8::MAX_REG8 => format!("{operand}"),
         _ => reg8::reg_to_name(arg_type),
@@ -11,15 +11,15 @@ fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &Console, operand: u8, arg_typ
     match OP::VALUE {
         ADD_VAL => {
             match C::VALUE {
-                CARRY_VAL =>debug_addr(console, format!("ADC A, {arg}")),
-                NO_CARRY_VAL => debug_addr(console, format!("ADD A, {arg}")),
+                CARRY_VAL =>debug_addr(curr_ip, format!("ADC A, {arg}")),
+                NO_CARRY_VAL => debug_addr(curr_ip, format!("ADD A, {arg}")),
                 _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
             }
         },
         SUB_VAL => {
             match C::VALUE {
-                CARRY_VAL => debug_addr(console, format!("SBC A, {arg}")),
-                NO_CARRY_VAL => debug_addr(console, format!("ADD A, {arg}")),
+                CARRY_VAL => debug_addr(curr_ip, format!("SBC A, {arg}")),
+                NO_CARRY_VAL => debug_addr(curr_ip, format!("ADD A, {arg}")),
                 _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
             }
         },
@@ -28,12 +28,12 @@ fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &Console, operand: u8, arg_typ
 }
 
 #[inline(always)]
-pub fn debug_addr(console: &Console, expr: String) {
-    debug!("0x{:04X}: {expr}", console.get_ip());
+pub fn debug_addr(addr: u16, expr: String) {
+    debug!("0x{:04X}: {expr}", addr);
 }
 
-pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut Console, arg_type: u8) {
-    log_arithm_a::<OP, C>(console, operand, arg_type);
+pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut Console, arg_type: u8, curr_ip: u16) {
+    log_arithm_a::<OP, C>(operand, arg_type, curr_ip);
     if C::VALUE == CARRY_VAL && console.is_flag_set(flag::C) {
         // If op with carry, like ADC, and Carry is set, increment the operand.
         operand += 1;
@@ -84,7 +84,7 @@ pub fn cp_a_operand(operand: u8, console: &mut Console) {
     console.clear_or_set_flag(carry::sub_8(a_val, operand), flag::C);
 }
 
-pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
+pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, curr_ip: u16) {
     console.clear_flags(&[flag::N, flag::H]);
     let curr_c: u8 = console.is_flag_set(flag::C) as u8;
 
@@ -100,14 +100,14 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
                 CARRY_VAL => {
                     reg = reg << 1 | c;
 
-                    if r8 == reg8::EA { debug_addr(console, format!("RLCA")); }
-                    else { debug_addr(console, format!("RLC {}", reg8::reg_to_name(r8))); }
+                    if r8 == reg8::EA { debug_addr(curr_ip, format!("RLCA")); }
+                    else { debug_addr(curr_ip, format!("RLC {}", reg8::reg_to_name(r8))); }
                 },
                 NO_CARRY_VAL => {
                     reg = reg << 1 | curr_c;
 
-                    if r8 == reg8::EA { debug_addr(console, format!("RLA")); }
-                    else { debug_addr(console, format!("RL {}", reg8::reg_to_name(r8))); }
+                    if r8 == reg8::EA { debug_addr(curr_ip, format!("RLA")); }
+                    else { debug_addr(curr_ip, format!("RL {}", reg8::reg_to_name(r8))); }
                 },
                 _ => panic!("Invalid carry"),
             }
@@ -118,14 +118,14 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console) {
                 CARRY_VAL => {
                     reg = reg >> 1 | c << 7;
 
-                    if r8 == reg8::EA { debug_addr(console, format!("RRCA")); }
-                    else { debug_addr(console, format!("RRC {}", reg8::reg_to_name(r8))); }
+                    if r8 == reg8::EA { debug_addr(curr_ip, format!("RRCA")); }
+                    else { debug_addr(curr_ip, format!("RRC {}", reg8::reg_to_name(r8))); }
                 },
                 NO_CARRY_VAL => {
                     reg = reg >> 1 | curr_c << 7;
 
-                    if r8 == reg8::EA { debug_addr(console, format!("RRA")); }
-                    else { debug_addr(console, format!("RR {}", reg8::reg_to_name(r8))); }
+                    if r8 == reg8::EA { debug_addr(curr_ip, format!("RRA")); }
+                    else { debug_addr(curr_ip, format!("RR {}", reg8::reg_to_name(r8))); }
                 },
                 _ => panic!("Invalid carry"),
             }

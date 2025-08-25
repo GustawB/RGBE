@@ -8,68 +8,68 @@ fn pop_low_high(console: &mut Console) -> (u16, u16) {
     (low, high)
 }
 
-fn arithm_a_imm8<OP: BitFlag, C: BitFlag>(console: &mut Console) {
+fn arithm_a_imm8<OP: BitFlag, C: BitFlag>(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
-    arithm_a_operand::<OP, C>(imm8, console, reg8::MAX_REG8);
+    arithm_a_operand::<OP, C>(imm8, console, reg8::MAX_REG8, curr_ip);
 }
 
-fn logic_a_imm8<OP: BitFlag>(console: &mut Console) {
+fn logic_a_imm8<OP: BitFlag>(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     logic_a_operand::<OP>(imm8, console);
 
-    debug_addr(console, format!("{} A, 0x{:04X}", OP::to_string(), imm8));
+    debug_addr(curr_ip, format!("{} A, 0x{:04X}", OP::to_string(), imm8));
 }
 
-fn cp_a_imm8(console: &mut Console) {
+fn cp_a_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     cp_a_operand(imm8, console);
 
-    debug_addr(console, format!("CP A, 0x{:04X}", imm8));
+    debug_addr(curr_ip, format!("CP A, 0x{:04X}", imm8));
 }
 
-fn ret(console: &mut Console) {
+fn ret(console: &mut Console, curr_ip: u16) {
     let (low, high) = pop_low_high(console);
     console.set_ip(low | (high << 8));
 
-    debug_addr(console, format!("RET"));
+    debug_addr(curr_ip, format!("RET"));
 }
 
-fn ret_cond(cc: u8, console: &mut Console) {
+fn ret_cond(cc: u8, console: &mut Console, curr_ip: u16) {
     if console.is_condition_met(cc) {
-        ret(console);
+        ret(console, curr_ip);
     }
 
-    debug_addr(console, format!("RET cc"));
+    debug_addr(curr_ip, format!("RET cc"));
 }
 
-fn reti(console: &mut Console) {
-    ret(console);
+fn reti(console: &mut Console, curr_ip: u16) {
+    ret(console, curr_ip);
     console.addr_bus[IME as usize] = 1;
 
-    debug_addr(console, format!("RETI"));
+    debug_addr(curr_ip, format!("RETI"));
 }
 
-fn jp_cc_imm16(cc: u8, console: &mut Console) {
+fn jp_cc_imm16(cc: u8, console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     if console.is_condition_met(cc) {
         console.set_ip(imm16);
     }
 
-    debug_addr(console, format!("JP {}, 0x{:04X}", cond::get_cond_name(cc), imm16));
+    debug_addr(curr_ip, format!("JP {}, 0x{:04X}", cond::get_cond_name(cc), imm16));
 }
 
-fn jp_imm16(console: &mut Console) {
+fn jp_imm16(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     console.set_ip(imm16);
 
-    debug_addr(console, format!("JP 0x{:04X}", imm16));
+    debug_addr(curr_ip, format!("JP 0x{:04X}", imm16));
 }
 
-fn jp_hl(console: &mut Console) {
+fn jp_hl(console: &mut Console, curr_ip: u16) {
     let hl_val: u16 = console[Word { idx: reg16::HL }];
     console.set_ip(hl_val);
 
-    debug_addr(console, format!("JP HL"));
+    debug_addr(curr_ip, format!("JP HL"));
 }
 
 fn setup_call(console: &mut Console) {
@@ -78,69 +78,69 @@ fn setup_call(console: &mut Console) {
     console.stk_push((next_instr_addr >> 8) as u8);
 }
 
-fn call_imm16(console: &mut Console) {
+fn call_imm16(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     setup_call(console);
     console.set_ip(imm16);
 
-    debug_addr(console, format!("CALL 0x{:04X}", imm16));
+    debug_addr(curr_ip, format!("CALL 0x{:04X}", imm16));
 }
 
-fn call_cc_imm16(cc: u8, console: &mut Console) {
+fn call_cc_imm16(cc: u8, console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     if console.is_condition_met(cc) {
         setup_call(console);
         console.set_ip(imm16);
     }
 
-    debug_addr(console, format!("CALL {}, 0x{:04X}", cond::get_cond_name(cc), imm16));
+    debug_addr(curr_ip, format!("CALL {}, 0x{:04X}", cond::get_cond_name(cc), imm16));
 }
 
-fn rst_tgt3(tgt3: u8, console: &mut Console) {
+fn rst_tgt3(tgt3: u8, console: &mut Console, curr_ip: u16) {
     setup_call(console);
     console.set_ip(tgt3 as u16);
 
-    debug_addr(console, format!("RST {tgt3}"));
+    debug_addr(curr_ip, format!("RST {tgt3}"));
 }
 
-fn pop_r16stk(r16stk: u8, console: &mut Console) {
+fn pop_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
     let (low, high) = pop_low_high(console);
     let reg: &mut u16 = &mut console[WordSTK { idx: r16stk }];
     *reg = low | (high << 8);
 
-    debug_addr(console, format!("POP {}", reg16stk::reg_to_name(r16stk)));
+    debug_addr(curr_ip, format!("POP {}", reg16stk::reg_to_name(r16stk)));
 }
 
-fn push_r16stk(r16stk: u8, console: &mut Console) {
+fn push_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
     let val: u16 = console[WordSTK { idx: r16stk }];
     console.stk_push((val >> 8) as u8);
     console.stk_push((val & 0x00FF) as u8);
 
-    debug_addr(console, format!("PUSH {}", reg16stk::reg_to_name(r16stk)));
+    debug_addr(curr_ip, format!("PUSH {}", reg16stk::reg_to_name(r16stk)));
 }
 
-fn ldh_c_a(console: &mut Console) {
+fn ldh_c_a(console: &mut Console, curr_ip: u16) {
     let a_val: u8 = console[Byte { idx: reg8::A }];
     let c_val: u8 = console[Byte { idx: reg8::C }];
     console.addr_bus[(0xFF00 + c_val as u16) as usize] = a_val;
 
-    debug_addr(console, format!("LDH C, A"));
+    debug_addr(curr_ip, format!("LDH C, A"));
 }
 
-fn ldh_imm8_a(console: &mut Console) {
+fn ldh_imm8_a(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     let a_val: u8 = console[Byte { idx: reg8::A }];
     console.addr_bus[(0xFF00 + imm8 as u16) as usize] = a_val;
 
-    debug_addr(console, format!("LDH [0x{:04X}], A", imm8));
+    debug_addr(curr_ip, format!("LDH [0x{:04X}], A", imm8));
 }
 
-fn ld_imm16_a(console: &mut Console) {
+fn ld_imm16_a(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     let a_val: u8 = console[Byte { idx: reg8::A }];
     console.addr_bus[imm16 as usize] = a_val;
 
-    debug_addr(console, format!("LD [0x{:04X}], A", imm16));
+    debug_addr(curr_ip, format!("LD [0x{:04X}], A", imm16));
 }
 
 fn load_mem_into_a(addr: u16, console: &mut Console) {
@@ -149,25 +149,25 @@ fn load_mem_into_a(addr: u16, console: &mut Console) {
     *a_val = addr_val;
 }
 
-fn ldh_a_c(console: &mut Console) {
+fn ldh_a_c(console: &mut Console, curr_ip: u16) {
     let c_val: u8 = console[Byte { idx: reg8::C }];
     load_mem_into_a(0xFF00 + c_val as u16, console);
 
-    debug_addr(console, format!("LDH A, C"));
+    debug_addr(curr_ip, format!("LDH A, C"));
 }
 
-fn ldh_a_imm8(console: &mut Console) {
+fn ldh_a_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     load_mem_into_a(0xFF00 + imm8 as u16, console);
 
-    debug_addr(console, format!("LDH A, 0x{:04X}", imm8));
+    debug_addr(curr_ip, format!("LDH A, 0x{:04X}", imm8));
 }
 
-fn ld_a_imm16(console: &mut Console) {
+fn ld_a_imm16(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     load_mem_into_a(imm16, console);
 
-    debug_addr(console, format!("LD A, 0x{:04X}", imm16));
+    debug_addr(curr_ip, format!("LD A, 0x{:04X}", imm16));
 }
 
 fn add_sp_imm8_logless(console: &mut Console, imm8: u8) -> u16 {
@@ -179,106 +179,106 @@ fn add_sp_imm8_logless(console: &mut Console, imm8: u8) -> u16 {
     sp_val + imm8 as u16
 }
 
-fn add_sp_imm8(console: &mut Console) {
+fn add_sp_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     add_sp_imm8_logless(console, imm8);
 
-    debug_addr(console, format!("ADD SP, 0x{:04X}", imm8));
+    debug_addr(curr_ip, format!("ADD SP, 0x{:04X}", imm8));
 }
 
-fn ld_hl_sp_imm8(console: &mut Console) {
+fn ld_hl_sp_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     let tmp: u16 = add_sp_imm8_logless(console, imm8);
     let hl_val: &mut u16 = &mut console[Word { idx: reg16::HL }];
     *hl_val = tmp;
 
-    debug_addr(console, format!("LD HL, SP+0x{:04X}", imm8));
+    debug_addr(curr_ip, format!("LD HL, SP+0x{:04X}", imm8));
 }
 
-fn ld_sp_hl(console: &mut Console) {
+fn ld_sp_hl(console: &mut Console, curr_ip: u16) {
     let hl_val: u16 = console[Word { idx: reg16::HL }];
     *(&mut console[Word { idx: reg16::SP }]) = hl_val;
 
-    debug_addr(console, format!("LD SP, HL"));
+    debug_addr(curr_ip, format!("LD SP, HL"));
 }
 
-fn di(console: &mut Console) {
+fn di(console: &mut Console, curr_ip: u16) {
     console.addr_bus[IME as usize] = 0;
 
-    debug_addr(console, format!("DI"));
+    debug_addr(curr_ip, format!("DI"));
 }
 
-fn ei(console: &mut Console) {
+fn ei(console: &mut Console, curr_ip: u16) {
     console.pending_ei = true;
 
-    debug_addr(console, format!("EI"));
+    debug_addr(curr_ip, format!("EI"));
 }
 
-pub fn dispatch(instr: u8, console: &mut Console) -> () {
+pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
     let cc: u8 = (instr << 3) >> 5;
     let tgt3: u8 = (instr << 2) >> 5;
     let r16stk: u8 = (instr << 2) >> 6;
 
     if instr == 198 {
-        arithm_a_imm8::<ADD, NO_CARRY>(console);
+        arithm_a_imm8::<ADD, NO_CARRY>(console, curr_ip);
     } else if instr == 206 {
-        arithm_a_imm8::<ADD, CARRY>(console);
+        arithm_a_imm8::<ADD, CARRY>(console, curr_ip);
     } else if instr == 214 {
-        arithm_a_imm8::<SUB, NO_CARRY>(console);
+        arithm_a_imm8::<SUB, NO_CARRY>(console, curr_ip);
     } else if instr == 222 {
-        arithm_a_imm8::<SUB, CARRY>(console);
+        arithm_a_imm8::<SUB, CARRY>(console, curr_ip);
     } else if instr == 230 {
-        logic_a_imm8::<AND>(console);
+        logic_a_imm8::<AND>(console, curr_ip);
     } else if instr == 238 {
-        logic_a_imm8::<XOR>(console);
+        logic_a_imm8::<XOR>(console, curr_ip);
     } else if instr == 246 {
-        logic_a_imm8::<OR>(console);
+        logic_a_imm8::<OR>(console, curr_ip);
     } else if instr == 254 {
-        cp_a_imm8(console);
+        cp_a_imm8(console, curr_ip);
     } else if instr & 0x18 == 192 {
-        ret_cond(cc, console);
+        ret_cond(cc, console, curr_ip);
     } else if instr == 201 {
-        ret(console);
+        ret(console, curr_ip);
     } else if instr == 217 {
-        reti(console);
+        reti(console, curr_ip);
     } else if instr & 0x18 == 194 {
-        jp_cc_imm16(cc, console);
+        jp_cc_imm16(cc, console, curr_ip);
     } else if instr == 195 {
-        jp_imm16(console);
+        jp_imm16(console, curr_ip);
     } else if instr == 233 {
-        jp_hl(console);
+        jp_hl(console, curr_ip);
     } else if instr & 0x18 == 196 {
-        call_cc_imm16(cc, console);
+        call_cc_imm16(cc, console, curr_ip);
     } else if instr == 205 {
-        call_imm16(console);
+        call_imm16(console, curr_ip);
     } else if instr & 0x38 == 199 {
-        rst_tgt3(tgt3, console);
+        rst_tgt3(tgt3, console, curr_ip);
     } else if instr & 0x00FF == 1 {
-        pop_r16stk(r16stk, console);
+        pop_r16stk(r16stk, console, curr_ip);
     } else if instr & 0x00FF == 5 {
-        push_r16stk(r16stk, console);
+        push_r16stk(r16stk, console, curr_ip);
     } else if instr == 226 {
-        ldh_c_a(console);
+        ldh_c_a(console, curr_ip);
     } else if instr == 224 {
-        ldh_imm8_a(console);
+        ldh_imm8_a(console, curr_ip);
     } else if instr == 234 {
-        ld_imm16_a(console);
+        ld_imm16_a(console, curr_ip);
     } else if instr == 242 {
-        ldh_a_c(console);
+        ldh_a_c(console, curr_ip);
     } else if instr == 240 {
-        ldh_a_imm8(console);
+        ldh_a_imm8(console, curr_ip);
     } else if instr == 250 {
-        ld_a_imm16(console);
+        ld_a_imm16(console, curr_ip);
     } else if instr == 232 {
-        add_sp_imm8(console);
+        add_sp_imm8(console, curr_ip);
     } else if instr == 248 {
-        ld_hl_sp_imm8(console);
+        ld_hl_sp_imm8(console, curr_ip);
     } else if instr == 249 {
-        ld_sp_hl(console);
+        ld_sp_hl(console, curr_ip);
     } else if instr == 243 {
-        di(console);
+        di(console, curr_ip);
     } else if instr == 251 {
-        ei(console);
+        ei(console, curr_ip);
     } else {
         panic!("Invalid opcode in block three");
     }

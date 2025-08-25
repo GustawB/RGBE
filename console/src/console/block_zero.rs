@@ -1,54 +1,54 @@
 use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{debug_addr, rotate_operand}, constants::{cond, flag, reg16, reg16mem, reg8}}, types::types::{BitFlag, Byte, Word, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
 
-fn ld_r16_imm16(r16: u8, console: &mut Console) {
+fn ld_r16_imm16(r16: u8, console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     let reg: &mut u16 = &mut console[Word { idx: r16 }];
     *reg = imm16;
 
-    debug_addr(console, format!("LD {}, 0x{:04X}", reg16::reg_to_name(r16), imm16));
+    debug_addr(curr_ip, format!("LD {}, 0x{:04X}", reg16::reg_to_name(r16), imm16));
 }
 
-fn ld_r16mem_a(r16: u8, console: &mut Console) {
+fn ld_r16mem_a(r16: u8, console: &mut Console, curr_ip: u16) {
     let r16mem_val: u16 = console.get_r16mem(r16);
     let a_val: &u8 = &console[Byte { idx: reg8::A }];
     console.addr_bus[r16mem_val as usize] = *a_val;
 
-    debug_addr(console, format!("LD [{}], A", reg16mem::reg_to_name(r16)));
+    debug_addr(curr_ip, format!("LD [{}], A", reg16mem::reg_to_name(r16)));
 }
 
-fn ld_a_r16mem(r16: u8, console: &mut Console) {
+fn ld_a_r16mem(r16: u8, console: &mut Console, curr_ip: u16) {
     let r16_val: u16 = console.get_r16mem(r16);
     let addr_bus_val: u8 = console.addr_bus[r16_val as usize];
     let a_val: &mut u8 = &mut console[Byte { idx: reg8::A }];
     *a_val = addr_bus_val;
 
-    debug_addr(console, format!("LD A, [{}]", reg16mem::reg_to_name(r16)));
+    debug_addr(curr_ip, format!("LD A, [{}]", reg16mem::reg_to_name(r16)));
 }
 
-fn ld_imm16_sp(console: &mut Console) {
+fn ld_imm16_sp(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     let sp_val: u16 = console[Word { idx: reg16::SP }];
     console.addr_bus[imm16 as usize] = (sp_val & 0xFF) as u8;
     console.addr_bus[(imm16 + 1) as usize] = (sp_val >> 8) as u8;
 
-    debug_addr(console, format!("LD 0x{:04X}, SP", imm16));
+    debug_addr(curr_ip, format!("LD 0x{:04X}, SP", imm16));
 }
 
-fn inc_r16(r16: u8, console: &mut Console) {
+fn inc_r16(r16: u8, console: &mut Console, curr_ip: u16) {
     let reg: &mut u16 = &mut console[Word { idx: r16 }];
     *reg += 1;
 
-    debug_addr(console, format!("INC {}", reg16::reg_to_name(r16)));
+    debug_addr(curr_ip, format!("INC {}", reg16::reg_to_name(r16)));
 }
 
-fn dec_r16(r16: u8, console: &mut Console) {
+fn dec_r16(r16: u8, console: &mut Console, curr_ip: u16) {
     let reg: &mut u16 = &mut console[Word { idx: r16 }];
     *reg -= 1;
 
-    debug_addr(console, format!("INC {}", reg16::reg_to_name(r16)));
+    debug_addr(curr_ip, format!("INC {}", reg16::reg_to_name(r16)));
 }
 
-fn add_hl_r16(r16: u8, console: &mut Console) {
+fn add_hl_r16(r16: u8, console: &mut Console, curr_ip: u16) {
     let r16_val: u16 = console[Word { idx: r16 }];
     let hl_val: &mut u16 = &mut console[Word { idx: reg16::HL }];
     let base: u16 = *hl_val;
@@ -57,10 +57,10 @@ fn add_hl_r16(r16: u8, console: &mut Console) {
     console.clear_or_set_flag(half_carry::add_16(base, r16_val), flag::H);
     console.clear_or_set_flag(carry::add_16(base, r16_val), flag::C);
 
-    debug_addr(console, format!("ADD HL, {}", reg16::reg_to_name(r16)));
+    debug_addr(curr_ip, format!("ADD HL, {}", reg16::reg_to_name(r16)));
 }
 
-fn inc_r8(r8: u8, console: &mut Console) {
+fn inc_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     let reg: &mut u8 = &mut console[Byte { idx: r8 }];
     let base: u8 = *reg;
     *reg += 1;
@@ -68,10 +68,10 @@ fn inc_r8(r8: u8, console: &mut Console) {
     console.clear_flag(flag::N);
     console.clear_or_set_flag(half_carry::add_8(base, 1), flag::H);
 
-    debug_addr(console, format!("INC {}", reg8::reg_to_name(r8)));
+    debug_addr(curr_ip, format!("INC {}", reg8::reg_to_name(r8)));
 }
 
-fn dec_r8(r8: u8, console: &mut Console) {
+fn dec_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     let reg: &mut u8 = &mut console[Byte { idx: r8 }];
     let base: u8 = *reg;
     *reg -= 1;
@@ -79,22 +79,22 @@ fn dec_r8(r8: u8, console: &mut Console) {
     console.set_flag(flag::N);
     console.clear_or_set_flag(half_carry::sub_8(base, 1), flag::H);
 
-    debug_addr(console, format!("DEC {}", reg8::reg_to_name(r8)));
+    debug_addr(curr_ip, format!("DEC {}", reg8::reg_to_name(r8)));
 }
 
-fn ld_r8_imm8(r8: u8, console: &mut Console) {
+fn ld_r8_imm8(r8: u8, console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     let reg: &mut u8 = &mut console[Byte { idx: r8 }];
     *reg = imm8;
 
-    debug_addr(console, format!("LD {}, 0x{:04X}", reg8::reg_to_name(r8), imm8));
+    debug_addr(curr_ip, format!("LD {}, 0x{:04X}", reg8::reg_to_name(r8), imm8));
 }
 
-fn rotate_a<DIR: BitFlag, C: BitFlag>(console: &mut Console) {
-    rotate_operand::<DIR, C>(reg8::EA, console);
+fn rotate_a<DIR: BitFlag, C: BitFlag>(console: &mut Console, curr_ip: u16) {
+    rotate_operand::<DIR, C>(reg8::EA, console, curr_ip);
 }
 
-fn daa(console: &mut Console) {
+fn daa(console: &mut Console, curr_ip: u16) {
     let mut adjustment: u8 = 0;
     let a_val: u8 = console[Byte { idx: reg8::A }];
     let n_flag: bool = console.is_flag_set(flag::N);
@@ -123,98 +123,98 @@ fn daa(console: &mut Console) {
     let a_val_mut: &mut u8 = &mut console[Byte { idx: reg8::A }];
     if n_flag { *a_val_mut -= adjustment; } else { *a_val_mut += adjustment; }
 
-    debug_addr(console, format!("DAA"));
+    debug_addr(curr_ip, format!("DAA"));
 }
 
-fn cpl(console: &mut Console) {
+fn cpl(console: &mut Console, curr_ip: u16) {
     console.set_flags(&[flag::N, flag::H]);
     let a_val: &mut u8 = &mut console[Byte { idx: reg8::A }];
     *a_val = !(*a_val);
 
-    debug_addr(console, format!("CPL"));
+    debug_addr(curr_ip, format!("CPL"));
 }
 
-fn scf(console: &mut Console) {
+fn scf(console: &mut Console, curr_ip: u16) {
     console.clear_flags(&[flag::N, flag::H]);
     console.set_flag(flag::C);
 
-    debug_addr(console, format!("SCF"));
+    debug_addr(curr_ip, format!("SCF"));
 }
 
-fn ccf(console: &mut Console) {
+fn ccf(console: &mut Console, curr_ip: u16) {
     console.clear_flags(&[flag::N, flag::H]);
     console.clear_or_set_flag(!console.is_flag_set(flag::C), flag::C);
 
-    debug_addr(console, format!("CCF"));
+    debug_addr(curr_ip, format!("CCF"));
 }
 
-fn jr_imm8(console: &mut Console) {
+fn jr_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     console.move_ip(imm8 as u16);
 
-    debug_addr(console, format!("JR 0x{:04X}", imm8));
+    debug_addr(curr_ip, format!("JR 0x{:04X}", imm8));
 }
 
-fn jr_cc_imm8(cc: u8, console: &mut Console) {
+fn jr_cc_imm8(cc: u8, console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     if console.is_condition_met(cc) {
         console.move_ip(imm8 as u16);
     }
 
-    debug_addr(console, format!("JR {}, 0x{:04X}", cond::get_cond_name(cc), imm8));
+    debug_addr(curr_ip, format!("JR {}, 0x{:04X}", cond::get_cond_name(cc), imm8));
 }
 
-fn stop(console: &mut Console) {
+fn stop(console: &mut Console, curr_ip: u16) {
     console.fetch_byte();
     // TODO: implement
 
-    debug_addr(console, format!("STOP"));
+    debug_addr(curr_ip, format!("STOP"));
 }
 
-pub fn dispatch(instr: u8, console: &mut Console) -> () {
+pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
     let op: u8 = (instr << 2) >> 6;
     if instr & 0x0F == 1 {
-        ld_r16_imm16(op, console);
+        ld_r16_imm16(op, console, curr_ip);
     } else if instr & 0x0F == 2 {
-        ld_r16mem_a(op, console);
+        ld_r16mem_a(op, console, curr_ip);
     } else if instr & 0x0F == 10 {
-        ld_a_r16mem(op, console);
+        ld_a_r16mem(op, console, curr_ip);
     } else if instr == 8 {
-        ld_imm16_sp(console);
+        ld_imm16_sp(console, curr_ip);
     } else if instr & 0x0F == 3 {
-        inc_r16(op, console);
+        inc_r16(op, console, curr_ip);
     } else if instr & 0x0F == 11 {
-        dec_r16(op, console);
+        dec_r16(op, console, curr_ip);
     } else if instr & 0x0F == 9 {
-        add_hl_r16(op, console);        
+        add_hl_r16(op, console, curr_ip);        
     } else if instr & 0x07 == 4 {
-        inc_r8(op, console);
+        inc_r8(op, console, curr_ip);
     } else if instr & 0x07 == 5 {
-        dec_r8(op, console);
+        dec_r8(op, console, curr_ip);
     } else if instr & 0x07 == 6 {
-        ld_r8_imm8(op, console);
+        ld_r8_imm8(op, console, curr_ip);
     } else if instr == 7 {
-        rotate_a::<LEFT, CARRY>(console);
+        rotate_a::<LEFT, CARRY>(console, curr_ip);
     } else if instr == 15 {
-        rotate_a::<RIGHT, CARRY>(console);
+        rotate_a::<RIGHT, CARRY>(console, curr_ip);
     } else if instr == 23 {
-        rotate_a::<LEFT, NO_CARRY>(console);
+        rotate_a::<LEFT, NO_CARRY>(console, curr_ip);
     } else if instr == 31 {
-        rotate_a::<RIGHT, NO_CARRY>(console);
+        rotate_a::<RIGHT, NO_CARRY>(console, curr_ip);
     } else if instr == 39 {
-        daa(console);
+        daa(console, curr_ip);
     } else if instr == 47 {
-        cpl(console);
+        cpl(console, curr_ip);
     } else if instr == 55 {
-        scf(console);
+        scf(console, curr_ip);
     } else if instr == 61 {
-        ccf(console);
+        ccf(console, curr_ip);
     } else if instr == 24 {
-        jr_imm8(console);
+        jr_imm8(console, curr_ip);
     } else if instr & 0x07 == 0 && instr >> 5 == 1 {
-        jr_cc_imm8(op, console);
+        jr_cc_imm8(op, console, curr_ip);
     } else if instr == 14 {
-        stop(console);
+        stop(console, curr_ip);
     } else {
         panic!("Invalid opcode in block zero.");
     }

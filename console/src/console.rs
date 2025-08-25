@@ -83,17 +83,18 @@ impl Console {
 
     // Process one instruction. Exposed outside mostly for the debugger
     pub fn step(&mut self) {
+        let curr_ip: u16 = self.get_ip();
         let bt = self.fetch_byte();
         if bt == 0xCB {
             let bt_instr: u8 = self.fetch_byte();
-            block_cb::dispatch(bt_instr, self);
+            block_cb::dispatch(self, bt_instr, curr_ip);
         }
         else {
             match bt >> 6 {
-                0 => block_zero::dispatch(bt, self),
-                1 => block_one::dispatch(bt, self),
-                2 => block_two::dispatch(bt, self),
-                3 => block_three::dispatch(bt, self),
+                0 => block_zero::dispatch(self, bt, curr_ip),
+                1 => block_one::dispatch(self, bt, curr_ip),
+                2 => block_two::dispatch(self, bt, curr_ip),
+                3 => block_three::dispatch(self, bt, curr_ip),
                 _ => panic!("Invalid instruction"),
             };
         }
