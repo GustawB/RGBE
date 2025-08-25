@@ -1,7 +1,8 @@
 use core::panic;
-use std::env;
+use std::{env, i64};
 use std::fs::read;
 use std::collections::HashMap;
+use console::{reg8, types::{Byte}};
 use env_logger::Env;
 use text_io::read;
 use std::io::Write;
@@ -9,10 +10,11 @@ use std::io::Write;
 use console::Console;
 
 mod actions {
-    pub const RUN: char = 'r';
-    pub const SET_BREAK: char = 'b';
-    pub const STEP: char = 's';
-    pub const EXIT: char = 'e';
+    pub const RUN: char         = 'r';
+    pub const SET_BREAK: char   = 'b';
+    pub const STEP: char        = 's';
+    pub const DUMP_REGS: char   = 'd';
+    pub const EXIT: char        = 'e';
 }
 
 struct Debugger {
@@ -39,6 +41,7 @@ impl Debugger {
                 actions::RUN => self.run_debugger(),
                 actions::SET_BREAK => self.set_break(),
                 actions::STEP => self.step(),
+                actions::DUMP_REGS => self.dump_regs(),
                 actions::EXIT => break,
                 _ => println!("Unknown debug command"),
             };
@@ -51,7 +54,7 @@ impl Debugger {
             let ip: u16 = self.console.get_ip(); 
             match self.breakpoints.get(&ip) {
                 Some(b) => {
-                    println!("{b} at address {ip} reached");
+                    println!("{b} at address 0x{:04X} reached", ip);
                     break;
                 }
                 None => self.console.step(),
@@ -60,7 +63,8 @@ impl Debugger {
     }
 
     fn set_break(&mut self) {
-        let addr: u16 = read!();
+        let addr_str: String = read!();
+        let addr: u16 = i64::from_str_radix(addr_str.trim_start_matches("0x"), 16).unwrap().try_into().unwrap();
         match self.breakpoints.get(&addr) {
             Some(b) => {
                 println!("Breakpoint {b} at address {addr} already set")
@@ -81,8 +85,20 @@ impl Debugger {
             println!("No ongoing debugging session. Enter \'{}\' to start debugging", actions::RUN);
         }
     }
+
+    fn dump_regs(&mut self) {
+        println!("REG8 DUMP:");
+        for reg in reg8::LIST {
+            if reg != reg8::HL_ADDR  || reg != reg8::EA {
+                println!("Register: {}; Value: {}", reg8::reg_to_name(reg), self.console[Byte { idx: reg }]);
+            }
+        }
+    }
 }
 
+
+// Deassembly ROM:
+// https://www.neviksti.com/DMG/DMG_ROM.asm
 fn main() {
     let args: Vec<String> = env::args().collect();
     assert!(args.len() == 2);
