@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'RGBE'",
+            "name": "Debug executable 'rgbe'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=RGBE",
-                    "--package=RGBE"
+                    "--bin=rgbe",
+                    "--package=rgbe"
                 ],
                 "filter": {
-                    "name": "RGBE",
+                    "name": "rgbe",
                     "kind": "bin"
                 }
             },

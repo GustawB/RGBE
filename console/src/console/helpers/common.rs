@@ -1,11 +1,11 @@
 use log::debug;
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, constants::{flag, reg8}}, types::types::{BitFlag, Byte, ADD_VAL, AND_VAL, CARRY_VAL, LEFT_VAL, NO_CARRY_VAL, OR_VAL, RIGHT_VAL, SUB_VAL, XOR_VAL}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, constants::{flag, reg8}}, types::{BitFlag, Byte, ADD_VAL, AND_VAL, CARRY_VAL, LEFT_VAL, NO_CARRY_VAL, OR_VAL, RIGHT_VAL, SUB_VAL, XOR_VAL}, Console};
 
-fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: u8, curr_ip: u16) {
+fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: usize, curr_ip: u16) {
     let arg: String = match arg_type {
         reg8::MAX_REG8 => format!("{operand}"),
-        _ => reg8::reg_to_name(arg_type),
+        _ => reg8::reg_to_name(arg_type as u8),
     };
 
     match OP::VALUE {
@@ -33,7 +33,7 @@ pub fn debug_addr(addr: u16, expr: String) {
 }
 
 pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut Console, arg_type: u8, curr_ip: u16) {
-    log_arithm_a::<OP, C>(operand, arg_type, curr_ip);
+    log_arithm_a::<OP, C>(operand, arg_type as usize, curr_ip);
     if C::VALUE == CARRY_VAL && console.is_flag_set(flag::C) {
         // If op with carry, like ADC, and Carry is set, increment the operand.
         operand += 1;

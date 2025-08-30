@@ -1,4 +1,4 @@
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{debug_addr, rotate_operand}, constants::{cond, flag, reg16, reg16mem, reg8}}, types::types::{BitFlag, Byte, Word, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{debug_addr, rotate_operand}, constants::{cond, flag, reg16, reg16mem, reg8}}, types::{BitFlag, Byte, Word, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
 
 fn ld_r16_imm16(r16: u8, console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
@@ -150,7 +150,7 @@ fn ccf(console: &mut Console, curr_ip: u16) {
 
 fn jr_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
-    console.move_ip(imm8 as u16);
+    console.move_ip(imm8);
 
     debug_addr(curr_ip, format!("JR 0x{:04X}", imm8));
 }
@@ -158,7 +158,7 @@ fn jr_imm8(console: &mut Console, curr_ip: u16) {
 fn jr_cc_imm8(cc: u8, console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     if console.is_condition_met(cc) {
-        console.move_ip(imm8 as u16);
+        console.move_ip(imm8);
     }
 
     debug_addr(curr_ip, format!("JR {}, 0x{:04X}", cond::get_cond_name(cc), imm8));
@@ -172,27 +172,29 @@ fn stop(console: &mut Console, curr_ip: u16) {
 }
 
 pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
-    let op: u8 = (instr << 2) >> 6;
+    let r8: u8 = (instr << 2) >> 5;
+    let r16: u8 = (instr << 2) >> 6;
+    let cc: u8 = (instr << 3) >> 5;
     if instr & 0x0F == 1 {
-        ld_r16_imm16(op, console, curr_ip);
+        ld_r16_imm16(r16, console, curr_ip);
     } else if instr & 0x0F == 2 {
-        ld_r16mem_a(op, console, curr_ip);
+        ld_r16mem_a(r16, console, curr_ip);
     } else if instr & 0x0F == 10 {
-        ld_a_r16mem(op, console, curr_ip);
+        ld_a_r16mem(r16, console, curr_ip);
     } else if instr == 8 {
         ld_imm16_sp(console, curr_ip);
     } else if instr & 0x0F == 3 {
-        inc_r16(op, console, curr_ip);
+        inc_r16(r16, console, curr_ip);
     } else if instr & 0x0F == 11 {
-        dec_r16(op, console, curr_ip);
+        dec_r16(r16, console, curr_ip);
     } else if instr & 0x0F == 9 {
-        add_hl_r16(op, console, curr_ip);        
+        add_hl_r16(r16, console, curr_ip);        
     } else if instr & 0x07 == 4 {
-        inc_r8(op, console, curr_ip);
+        inc_r8(r8, console, curr_ip);
     } else if instr & 0x07 == 5 {
-        dec_r8(op, console, curr_ip);
+        dec_r8(r8, console, curr_ip);
     } else if instr & 0x07 == 6 {
-        ld_r8_imm8(op, console, curr_ip);
+        ld_r8_imm8(r8, console, curr_ip);
     } else if instr == 7 {
         rotate_a::<LEFT, CARRY>(console, curr_ip);
     } else if instr == 15 {
@@ -212,7 +214,7 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
     } else if instr == 24 {
         jr_imm8(console, curr_ip);
     } else if instr & 0x07 == 0 && instr >> 5 == 1 {
-        jr_cc_imm8(op, console, curr_ip);
+        jr_cc_imm8(cc, console, curr_ip);
     } else if instr == 14 {
         stop(console, curr_ip);
     } else {

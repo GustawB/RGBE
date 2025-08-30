@@ -1,6 +1,6 @@
 use core::panic;
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, debug_addr, logic_a_operand}, constants::{cond, flag, reg16, reg16stk, reg8, IME}}, types::types::{BitFlag, Byte, Word, WordSTK, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, debug_addr, logic_a_operand}, constants::{cond, flag, reg16, reg16stk, reg8, IME}}, types::{BitFlag, Byte, Word, WordSTK, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn pop_low_high(console: &mut Console) -> (u16, u16) {
     let low: u16 = console.stk_pop() as u16;
@@ -10,7 +10,7 @@ fn pop_low_high(console: &mut Console) -> (u16, u16) {
 
 fn arithm_a_imm8<OP: BitFlag, C: BitFlag>(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
-    arithm_a_operand::<OP, C>(imm8, console, reg8::MAX_REG8, curr_ip);
+    arithm_a_operand::<OP, C>(imm8, console, reg8::MAX_REG8 as u8, curr_ip);
 }
 
 fn logic_a_imm8<OP: BitFlag>(console: &mut Console, curr_ip: u16) {
@@ -253,9 +253,9 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
         call_imm16(console, curr_ip);
     } else if instr & 0x38 == 199 {
         rst_tgt3(tgt3, console, curr_ip);
-    } else if instr & 0x00FF == 1 {
+    } else if instr & 0x0F == 1 {
         pop_r16stk(r16stk, console, curr_ip);
-    } else if instr & 0x00FF == 5 {
+    } else if instr & 0x0F == 5 {
         push_r16stk(r16stk, console, curr_ip);
     } else if instr == 226 {
         ldh_c_a(console, curr_ip);
@@ -280,6 +280,7 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
     } else if instr == 251 {
         ei(console, curr_ip);
     } else {
+        let _sex = instr & 0x00FF; 
         panic!("Invalid opcode in block three");
     }
 }

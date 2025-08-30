@@ -29,8 +29,10 @@ pub mod reg8 {
     pub const L: u8                 = 5;
     pub const HL_ADDR: u8           = 6;
     pub const A: u8                 = 7;
-    pub const EA: u8               = 10; // Explicit A (instead of r8 value)
-    pub const MAX_REG8: u8         = 11;
+    pub const EA: u8               = 8; // Explicit A (instead of r8 value)
+    pub const MAX_REG8: usize         = 9;
+
+    pub const LIST: [u8; MAX_REG8] = [B, C, D, E, H, L, HL_ADDR, A, EA];
 
     pub fn reg_to_name(reg: u8) -> String {
         match reg {

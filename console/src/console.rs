@@ -1,5 +1,5 @@
 mod helpers;
-mod types;
+pub mod types;
 
 mod block_cb;
 mod block_zero;
@@ -9,7 +9,8 @@ mod block_three;
 
 use std::ops::{Index, IndexMut};
 
-use crate::console::{helpers::constants::{cond, flag, reg16, reg16mem, reg16stk, reg8, ADDR_BUS_SIZE, IME}, types::types::{Byte, Register, Word, WordSTK}};
+pub use crate::console::helpers::constants::reg8;
+use crate::console::{helpers::constants::{cond, flag, reg16, reg16mem, reg16stk, ADDR_BUS_SIZE, IME}, types::{Byte, Register, Word, WordSTK}};
 
 pub struct Console {
     pub addr_bus: [u8; ADDR_BUS_SIZE],
@@ -57,8 +58,12 @@ impl Console {
         ((b as u16) << 8) | a as u16 // Little endian garbage
     }
 
-    pub fn move_ip(&mut self, amount: u16) {
-        unsafe { self.ip.value += amount };
+    pub fn move_ip(&mut self, amount: u8) {
+        if (amount as i8) < 0 {
+            unsafe { self.ip.value -= (amount as i8).abs() as u16 };
+        } else {
+            unsafe { self.ip.value += amount as u16 };
+        }
     }
 
     pub fn set_ip(&mut self, val: u16) {
