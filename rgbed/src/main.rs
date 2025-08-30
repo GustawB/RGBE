@@ -10,11 +10,12 @@ use std::io::Write;
 use console::Console;
 
 mod actions {
-    pub const RUN: char         = 'r';
-    pub const SET_BREAK: char   = 'b';
-    pub const STEP: char        = 's';
-    pub const DUMP_REGS: char   = 'd';
-    pub const EXIT: char        = 'e';
+    pub const RUN: char             = 'r';
+    pub const SET_BREAK: char       = 'b';
+    pub const REMOVE_BREAK: char    = 'x';
+    pub const STEP: char            = 's';
+    pub const DUMP_REGS: char       = 'd';
+    pub const EXIT: char            = 'e';
 }
 
 struct Debugger {
@@ -40,6 +41,7 @@ impl Debugger {
             match cmd {
                 actions::RUN => self.run_debugger(),
                 actions::SET_BREAK => self.set_break(),
+                actions::REMOVE_BREAK => self.remove_break(),
                 actions::STEP => self.step(),
                 actions::DUMP_REGS => self.dump_regs(),
                 actions::EXIT => break,
@@ -76,6 +78,26 @@ impl Debugger {
                 self.breakpoints.insert(addr, name);
             }
         };
+    }
+
+    // Holding two separate hashmaps may be faster,
+    // but for now, simplicity > speed (I have at most 2-3 breakpoints anyway)
+    fn remove_break(&mut self) {
+        let name: String = read!();
+        // It is guaranteed that names are unique
+        let mut addr: u16 = std::u16::MAX;
+        for (key, val) in self.breakpoints.iter() {
+            if *val == name {
+                addr = *key;
+            }
+        };
+
+        if addr == std::u16::MAX {
+            println!("Breakpoint {name} does not exist");
+        } else {
+           self.breakpoints.remove(&addr).unwrap();
+           println!("Removed breakpoint {name} at address 0x{:04X}", addr);
+        }
     }
 
     fn step(&mut self) {
