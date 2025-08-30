@@ -152,7 +152,7 @@ fn jr_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     console.move_ip(imm8);
 
-    debug_addr(curr_ip, format!("JR 0x{:04X}", imm8));
+    debug_addr(curr_ip, format!("JR 0x{:04X}", console.get_ip()));
 }
 
 fn jr_cc_imm8(cc: u8, console: &mut Console, curr_ip: u16) {
@@ -161,7 +161,8 @@ fn jr_cc_imm8(cc: u8, console: &mut Console, curr_ip: u16) {
         console.move_ip(imm8);
     }
 
-    debug_addr(curr_ip, format!("JR {}, 0x{:04X}", cond::get_cond_name(cc), imm8));
+    debug_addr(curr_ip, format!("JR {}, 0x{:04X}",
+                cond::get_cond_name(cc), console.get_ip()));
 }
 
 fn stop(console: &mut Console, curr_ip: u16) {

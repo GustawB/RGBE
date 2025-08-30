@@ -75,15 +75,16 @@ impl Console {
     }
 
     pub fn stk_push(&mut self, val: u8) {
-        let sp_val: &mut u16 = &mut self[Word { idx: reg16::SP }];
-        *sp_val -= 1;
-        self.addr_bus[*sp_val as usize] = val;
+        self[Word { idx: reg16::SP }] -= 1;
+        let sp: u16 = self[Word { idx: reg16::SP }];
+        self.addr_bus[sp as usize] = val;
     }
 
     pub fn stk_pop(&mut self) -> u8 {
-        let sp_val: &mut u16 = &mut self[Word { idx: reg16::SP }];
-        *sp_val += 1;
-        self.addr_bus[*sp_val as usize]
+        let sp: u16 = self[Word { idx: reg16::SP }];
+        let res: u8 = self.addr_bus[sp as usize];
+        self[Word { idx: reg16::SP }] += 1;
+        res
     }
 
     // Process one instruction. Exposed outside mostly for the debugger

@@ -67,12 +67,12 @@ impl Debugger {
         let addr: u16 = i64::from_str_radix(addr_str.trim_start_matches("0x"), 16).unwrap().try_into().unwrap();
         match self.breakpoints.get(&addr) {
             Some(b) => {
-                println!("Breakpoint {b} at address {addr} already set")
+                println!("Breakpoint {b} at address 0x{:04X} already set", addr)
             }
             None => {
                 self.break_count += 1;
-                let name: String = format!("break{}", self.break_count);
-                println!("{name} set at address {addr}");
+                let name: String = format!("break_{}", self.break_count);
+                println!("{name} set at address 0x{:04X}", addr);
                 self.breakpoints.insert(addr, name);
             }
         };
@@ -89,8 +89,8 @@ impl Debugger {
     fn dump_regs(&mut self) {
         println!("REG8 DUMP:");
         for reg in reg8::LIST {
-            if reg != reg8::HL_ADDR  || reg != reg8::EA {
-                println!("Register: {}; Value: {}", reg8::reg_to_name(reg), self.console[Byte { idx: reg }]);
+            if reg != reg8::HL_ADDR && reg != reg8::EA {
+                println!("Register: {}; Value: 0x{:02X}", reg8::reg_to_name(reg), self.console[Byte { idx: reg }]);
             }
         }
     }
