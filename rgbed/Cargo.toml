@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 text_io = "0.1.13"
-console = { path = "../console" }
+console = { path = "../console", features = ["debugger"] }
 log = "0.4.27"
 env_logger = "0.11.8"
 

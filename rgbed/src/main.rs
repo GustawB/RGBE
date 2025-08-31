@@ -55,9 +55,13 @@ impl Debugger {
                 actions::SET_BREAK => self.set_break(),
                 actions::REMOVE_BREAK => self.remove_break(),
                 actions::STEP => {
-                    self.step();
-                    return;
-                }
+                    if self.started {
+                        self.stepping = true;
+                        break;
+                    } else {
+                        println!("No ongoing debugging session. Enter \'{}\' to start debugging", actions::RUN);
+                    }
+                },
                 actions::DUMP_REGS => Debugger::dump_regs(console),
                 _ => println!("Unknown debug command"),
             };
@@ -97,14 +101,6 @@ impl Debugger {
         } else {
            self.breakpoints.remove(&addr).unwrap();
            println!("Removed breakpoint {name} at address 0x{:04X}", addr);
-        }
-    }
-
-    fn step(&mut self) {
-        if self.started {
-            self.stepping = true;
-        } else {
-            println!("No ongoing debugging session. Enter \'{}\' to start debugging", actions::RUN);
         }
     }
 

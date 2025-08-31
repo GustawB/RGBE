@@ -7,12 +7,12 @@ mod block_one;
 mod block_two;
 mod block_three;
 
-use std::ops::{Index, IndexMut};
+use std::{marker::PhantomData, ops::{Index, IndexMut}};
 
 pub use crate::console::helpers::constants::reg8;
 pub use crate::console::helpers::common::debug_addr;
 use crate::{console::{helpers::{constants::{cond, flag, reg16, reg16mem, reg16stk, ADDR_BUS_SIZE, IME}}, types::{Byte, Register, Word, WordSTK}}};
-//#[cfg(debug)]
+#[cfg(feature = "debugger")]
 use crate::types::Hookable;
 
 pub struct Console<'a> {
@@ -25,7 +25,9 @@ pub struct Console<'a> {
     ip: Register,
     pub pending_ei: bool,
 
-    //#[cfg(debug)]
+    phantom: PhantomData<&'a u8>,
+
+    #[cfg(feature = "debugger")]
     hookable: Option<&'a mut dyn Hookable>,
 }
 
@@ -67,12 +69,14 @@ impl<'a> Console<'a> {
                 sp: Register { halves: [0xFF, 0xFE] },
                 ip: Register { value: 0 },
                 pending_ei: false,
+                phantom: PhantomData,
+                #[cfg(feature = "debugger")]
                 hookable: None,
             })
         }
     }
 
-    //#[cfg(debug)]
+    #[cfg(feature = "debugger")]
     pub fn set_hookable<T: Hookable>(&mut self, h: &'a mut T) {
         self.hookable = Some(h);
     }
@@ -143,12 +147,17 @@ impl<'a> Console<'a> {
         }
     }
 
+    #[cfg(feature = "debugger")]
     pub fn call_hook(&mut  self, log: String, curr_ip: u16) {
         if let Some(h) = self.hookable.take() {
             h.hook(self, log, curr_ip);
             self.hookable = Some(h);
         }
     }
+
+    #[inline(always)]
+    #[cfg(not(feature = "debugger"))]
+    pub fn call_hook(&mut  self, _log: String, _curr_ip: u16) {}
 
     // Entry point of the console.
     pub fn execute(&mut self) {
