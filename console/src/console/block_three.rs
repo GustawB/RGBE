@@ -74,8 +74,8 @@ fn jp_hl(console: &mut Console, curr_ip: u16) {
 
 fn setup_call(console: &mut Console) {
     let next_instr_addr: u16 = console.get_ip();
-    console.stk_push((next_instr_addr & 0x00FF) as u8);
     console.stk_push((next_instr_addr >> 8) as u8);
+    console.stk_push((next_instr_addr & 0x00FF) as u8);
 }
 
 fn call_imm16(console: &mut Console, curr_ip: u16) {

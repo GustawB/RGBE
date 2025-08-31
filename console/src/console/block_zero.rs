@@ -157,12 +157,13 @@ fn jr_imm8(console: &mut Console, curr_ip: u16) {
 
 fn jr_cc_imm8(cc: u8, console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
-    if console.is_condition_met(cc) {
-        console.move_ip(imm8);
-    }
-
+    console.move_ip(imm8);
     debug_addr(curr_ip, format!("JR {}, 0x{:04X}",
-                cond::get_cond_name(cc), console.get_ip()));
+            cond::get_cond_name(cc), console.get_ip()));
+    
+    if !console.is_condition_met(cc) {
+        console.move_ip(std::u8::MAX - imm8 + 1);
+    }
 }
 
 fn stop(console: &mut Console, curr_ip: u16) {
@@ -175,7 +176,7 @@ fn stop(console: &mut Console, curr_ip: u16) {
 pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
     let r8: u8 = (instr << 2) >> 5;
     let r16: u8 = (instr << 2) >> 6;
-    let cc: u8 = (instr << 3) >> 5;
+    let cc: u8 = (instr << 3) >> 6;
     if instr & 0x0F == 1 {
         ld_r16_imm16(r16, console, curr_ip);
     } else if instr & 0x0F == 2 {

@@ -78,7 +78,7 @@ pub fn logic_a_operand<OP: BitFlag>(operand: u8, console: &mut Console) {
 
 pub fn cp_a_operand(operand: u8, console: &mut Console) {
     let a_val: u8 = console[Byte { idx: reg8::A }];
-    console.clear_or_set_flag(a_val - operand == 0, flag::Z);
+    console.clear_or_set_flag(a_val == operand, flag::Z);
     console.set_flag( flag::N);
     console.clear_or_set_flag(half_carry::sub_8(a_val, operand), flag::H);
     console.clear_or_set_flag(carry::sub_8(a_val, operand), flag::C);
