@@ -2,7 +2,8 @@ use core::panic;
 use std::{env, i64};
 use std::fs::read;
 use std::collections::HashMap;
-use console::types::{Hookable, Stepable};
+use console::debug_addr;
+use console::types::Hookable;
 use console::{reg8, types::{Byte}};
 use env_logger::Env;
 use text_io::read;
@@ -16,12 +17,12 @@ mod actions {
     pub const REMOVE_BREAK: char    = 'x';
     pub const STEP: char            = 's';
     pub const DUMP_REGS: char       = 'd';
-    pub const EXIT: char            = 'e';
 }
 
 struct Debugger {
     break_count: u32,
     started: bool,
+    stepping: bool,
     breakpoints: HashMap<u16, String>,
 }
 
@@ -30,36 +31,36 @@ impl Debugger {
         Debugger {
             break_count: 0,
             started: false,
+            stepping: false,
             breakpoints: HashMap::new(),
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, console: &Console, addr: u16) {
+        if self.breakpoints.contains_key(&addr) {
+            println!("Breakpoint {} at address 0x{:04X} reached",
+                    self.breakpoints.get(&addr).unwrap(), addr);
+        } else if !self.stepping && self.started {
+            return;
+        }
+        self.stepping = false;
+
         loop {
             let cmd: char = read!();
             match cmd {
-                actions::RUN => self.run_debugger(),
+                actions::RUN => {
+                    self.started = true;
+                    return;
+                },
                 actions::SET_BREAK => self.set_break(),
                 actions::REMOVE_BREAK => self.remove_break(),
-                actions::STEP => self.step(),
-                actions::DUMP_REGS => self.dump_regs(),
-                actions::EXIT => break,
+                actions::STEP => {
+                    self.step();
+                    return;
+                }
+                actions::DUMP_REGS => Debugger::dump_regs(console),
                 _ => println!("Unknown debug command"),
             };
-        }
-    }
-
-    fn run_debugger(&mut self) {
-        self.started = true;
-        loop {
-            let ip: u16 = self.console.get_ip(); 
-            match self.breakpoints.get(&ip) {
-                Some(b) => {
-                    println!("{b} at address 0x{:04X} reached", ip);
-                    break;
-                }
-                None => self.console.step(),
-            }
         }
     }
 
@@ -101,25 +102,29 @@ impl Debugger {
 
     fn step(&mut self) {
         if self.started {
-            self.console.step();
+            self.stepping = true;
         } else {
             println!("No ongoing debugging session. Enter \'{}\' to start debugging", actions::RUN);
         }
     }
 
-    fn dump_regs(&mut self) {
+    fn dump_regs(console: &Console) {
         println!("REG8 DUMP:");
         for reg in reg8::LIST {
             if reg != reg8::HL_ADDR && reg != reg8::EA {
-                println!("Register: {}; Value: 0x{:02X}", reg8::reg_to_name(reg), self.console[Byte { idx: reg }]);
+                println!("Register: {}; Value: 0x{:02X}", reg8::reg_to_name(reg), console[Byte { idx: reg }]);
             }
         }
     }
 }
 
 impl Hookable for Debugger {
-    fn hook(&mut self, console: &Console) {
-        
+    fn hook(&mut self, console: &Console, log: String, addr: u16) {
+        if addr != std::u16::MAX {
+            debug_addr(addr, log);
+        }
+
+        self.run(console, addr);
     }
 }
 
@@ -148,8 +153,8 @@ fn main() {
             )
         }).init();
 
-    let debugger = Debugger::init();
-    console.set_hookable(&debugger);
+    let mut debugger = Debugger::init();
+    console.set_hookable(&mut debugger);
 
     console.execute();
 }

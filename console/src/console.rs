@@ -10,6 +10,7 @@ mod block_three;
 use std::ops::{Index, IndexMut};
 
 pub use crate::console::helpers::constants::reg8;
+pub use crate::console::helpers::common::debug_addr;
 use crate::{console::{helpers::{constants::{cond, flag, reg16, reg16mem, reg16stk, ADDR_BUS_SIZE, IME}}, types::{Byte, Register, Word, WordSTK}}};
 //#[cfg(debug)]
 use crate::types::Hookable;

@@ -28,7 +28,7 @@ fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &mut Console, operand: u8, arg
 }
 
 #[inline(always)]
-pub fn debug_addr(addr: u16, expr: &String) {
+pub fn debug_addr(addr: u16, expr: String) {
     debug!("0x{:04X}: {expr}", addr);
 }
 
