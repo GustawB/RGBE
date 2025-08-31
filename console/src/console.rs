@@ -10,9 +10,11 @@ mod block_three;
 use std::ops::{Index, IndexMut};
 
 pub use crate::console::helpers::constants::reg8;
-use crate::console::{helpers::constants::{cond, flag, reg16, reg16mem, reg16stk, ADDR_BUS_SIZE, IME}, types::{Byte, Register, Word, WordSTK}};
+use crate::{console::{helpers::{constants::{cond, flag, reg16, reg16mem, reg16stk, ADDR_BUS_SIZE, IME}}, types::{Byte, Register, Word, WordSTK}}};
+//#[cfg(debug)]
+use crate::types::Hookable;
 
-pub struct Console {
+pub struct Console<'a> {
     pub addr_bus: [u8; ADDR_BUS_SIZE],
     af: Register,
     bc: Register,
@@ -21,6 +23,9 @@ pub struct Console {
     sp: Register,
     ip: Register,
     pub pending_ei: bool,
+
+    //#[cfg(debug)]
+    hookable: Option<&'a mut dyn Hookable>,
 }
 
 const HEADER_SIZE: usize = 52;
@@ -38,8 +43,8 @@ static HEADER: [u8; HEADER_SIZE] = [
     //TO BE FILLED
 ];
 
-impl Console {
-    pub fn init(boot_rom: Vec<u8>) -> Result<Console, String> {
+impl<'a> Console<'a> {
+    pub fn init(boot_rom: Vec<u8>) -> Result<Console<'a>, String> {
         if boot_rom.len() > 0x100 {
             Err(String::from("Boot rom too long"))
         } else {
@@ -61,8 +66,14 @@ impl Console {
                 sp: Register { halves: [0xFF, 0xFE] },
                 ip: Register { value: 0 },
                 pending_ei: false,
+                hookable: None,
             })
         }
+    }
+
+    //#[cfg(debug)]
+    pub fn set_hookable<T: Hookable>(&mut self, h: &'a mut T) {
+        self.hookable = Some(h);
     }
 
     pub fn fetch_byte(&mut self) -> u8 {
@@ -107,8 +118,7 @@ impl Console {
         res
     }
 
-    // Process one instruction. Exposed outside mostly for the debugger
-    pub fn step(&mut self) {
+    fn step(&mut self) {
         let curr_ip: u16 = self.get_ip();
         let bt = self.fetch_byte();
         if bt == 0xCB {
@@ -132,8 +142,17 @@ impl Console {
         }
     }
 
+    pub fn call_hook(&mut  self, log: String, curr_ip: u16) {
+        if let Some(h) = self.hookable.take() {
+            h.hook(self, log, curr_ip);
+            self.hookable = Some(h);
+        }
+    }
+
     // Entry point of the console.
     pub fn execute(&mut self) {
+        self.call_hook("".to_owned(), std::u16::MAX);
+        
         loop { self.step(); }
     }
 
@@ -279,7 +298,7 @@ impl Console {
     }
 }
 
-impl Index<Byte> for Console {
+impl<'a> Index<Byte> for Console<'a> {
     type Output = u8;
 
     fn index(&self, index: Byte) -> &Self::Output {
@@ -287,13 +306,13 @@ impl Index<Byte> for Console {
     }
 }
 
-impl IndexMut<Byte> for Console {
+impl<'a> IndexMut<Byte> for Console<'a> {
     fn index_mut(&mut self, index: Byte) -> &mut Self::Output {
         self.get_r8_mut(index.idx)
     }
 }
 
-impl Index<Word> for Console {
+impl<'a> Index<Word> for Console<'a> {
     type Output = u16;
 
     fn index(&self, index: Word) -> &Self::Output {
@@ -301,13 +320,13 @@ impl Index<Word> for Console {
     }
 }
 
-impl IndexMut<Word> for Console {
+impl<'a> IndexMut<Word> for Console<'a> {
     fn index_mut(&mut self, index: Word) -> &mut Self::Output {
         self.get_r16_mut(index.idx)
     }
 }
 
-impl Index<WordSTK> for Console {
+impl<'a> Index<WordSTK> for Console<'a> {
     type Output = u16;
 
     fn index(&self, index: WordSTK) -> &Self::Output {
@@ -315,7 +334,7 @@ impl Index<WordSTK> for Console {
     }
 }
 
-impl IndexMut<WordSTK> for Console {
+impl<'a> IndexMut<WordSTK> for Console<'a> {
     fn index_mut(&mut self, index: WordSTK) -> &mut Self::Output {
         self.get_r16stk_mut(index.idx)
     }

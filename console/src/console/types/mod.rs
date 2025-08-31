@@ -1,3 +1,5 @@
+use crate::Console;
+
 pub union Register {
     pub value: u16,
     pub halves: [u8; 2]
@@ -108,4 +110,8 @@ impl BitFlag for RIGHT {
     fn to_string() -> String {
         "RIGHT".to_string()
     }
+}
+
+pub trait Hookable {
+    fn hook(&mut self, console: &Console, log: String, addr: u16);
 }

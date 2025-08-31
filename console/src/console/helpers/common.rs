@@ -2,7 +2,7 @@ use log::debug;
 
 use crate::console::{helpers::{bit_ops::{carry, half_carry}, constants::{flag, reg8}}, types::{BitFlag, Byte, ADD_VAL, AND_VAL, CARRY_VAL, LEFT_VAL, NO_CARRY_VAL, OR_VAL, RIGHT_VAL, SUB_VAL, XOR_VAL}, Console};
 
-fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: usize, curr_ip: u16) {
+fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &mut Console, operand: u8, arg_type: usize, curr_ip: u16) {
     let arg: String = match arg_type {
         reg8::MAX_REG8 => format!("{operand}"),
         _ => reg8::reg_to_name(arg_type as u8),
@@ -11,15 +11,15 @@ fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: usize, curr_ip: 
     match OP::VALUE {
         ADD_VAL => {
             match C::VALUE {
-                CARRY_VAL =>debug_addr(curr_ip, format!("ADC A, {arg}")),
-                NO_CARRY_VAL => debug_addr(curr_ip, format!("ADD A, {arg}")),
+                CARRY_VAL => console.call_hook(format!("ADC A, {arg}"), curr_ip),
+                NO_CARRY_VAL => console.call_hook(format!("ADD A, {arg}"), curr_ip),
                 _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
             }
         },
         SUB_VAL => {
             match C::VALUE {
-                CARRY_VAL => debug_addr(curr_ip, format!("SBC A, {arg}")),
-                NO_CARRY_VAL => debug_addr(curr_ip, format!("ADD A, {arg}")),
+                CARRY_VAL => console.call_hook(format!("SBC A, {arg}"), curr_ip),
+                NO_CARRY_VAL => console.call_hook(format!("ADD A, {arg}"), curr_ip),
                 _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
             }
         },
@@ -28,12 +28,12 @@ fn log_arithm_a<OP: BitFlag, C: BitFlag>(operand: u8, arg_type: usize, curr_ip: 
 }
 
 #[inline(always)]
-pub fn debug_addr(addr: u16, expr: String) {
+pub fn debug_addr(addr: u16, expr: &String) {
     debug!("0x{:04X}: {expr}", addr);
 }
 
 pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut Console, arg_type: u8, curr_ip: u16) {
-    log_arithm_a::<OP, C>(operand, arg_type as usize, curr_ip);
+    log_arithm_a::<OP, C>(console, operand, arg_type as usize, curr_ip);
     if C::VALUE == CARRY_VAL && console.is_flag_set(flag::C) {
         // If op with carry, like ADC, and Carry is set, increment the operand.
         operand += 1;
@@ -98,16 +98,17 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, c
             c = reg >> 7;
             match C::VALUE {
                 CARRY_VAL => {
-                    reg = reg << 1 | c;
+                    if r8 == reg8::EA { console.call_hook(format!("RLCA"), curr_ip); }
+                    else { console.call_hook(format!("RLC {}", reg8::reg_to_name(r8)), curr_ip); }
 
-                    if r8 == reg8::EA { debug_addr(curr_ip, format!("RLCA")); }
-                    else { debug_addr(curr_ip, format!("RLC {}", reg8::reg_to_name(r8))); }
+                    reg = reg << 1 | c;
                 },
                 NO_CARRY_VAL => {
+                    if r8 == reg8::EA { console.call_hook(format!("RLA"), curr_ip); }
+                    else { console.call_hook(format!("RL {}", reg8::reg_to_name(r8)), curr_ip); }
+
                     reg = reg << 1 | curr_c;
 
-                    if r8 == reg8::EA { debug_addr(curr_ip, format!("RLA")); }
-                    else { debug_addr(curr_ip, format!("RL {}", reg8::reg_to_name(r8))); }
                 },
                 _ => panic!("Invalid carry"),
             }
@@ -116,16 +117,16 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, c
             c = reg & 0x1;
             match C::VALUE {
                 CARRY_VAL => {
-                    reg = reg >> 1 | c << 7;
+                    if r8 == reg8::EA { console.call_hook(format!("RRCA"), curr_ip); }
+                    else { console.call_hook(format!("RRC {}", reg8::reg_to_name(r8)), curr_ip); }
 
-                    if r8 == reg8::EA { debug_addr(curr_ip, format!("RRCA")); }
-                    else { debug_addr(curr_ip, format!("RRC {}", reg8::reg_to_name(r8))); }
+                    reg = reg >> 1 | c << 7;
                 },
                 NO_CARRY_VAL => {
-                    reg = reg >> 1 | curr_c << 7;
+                    if r8 == reg8::EA { console.call_hook(format!("RRA"), curr_ip); }
+                    else { console.call_hook(format!("RR {}", reg8::reg_to_name(r8)), curr_ip); }
 
-                    if r8 == reg8::EA { debug_addr(curr_ip, format!("RRA")); }
-                    else { debug_addr(curr_ip, format!("RR {}", reg8::reg_to_name(r8))); }
+                    reg = reg >> 1 | curr_c << 7;
                 },
                 _ => panic!("Invalid carry"),
             }
@@ -135,6 +136,6 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, c
     console.clear_or_set_flag(reg == 0 && r8 != reg8::EA, flag::Z);
     console.clear_or_set_flag(c != 0, flag::C);
 
-    if r8 != reg8::EA { *(&mut console[Byte { idx: r8 }]) = reg; }
-    else { *(&mut console[Byte { idx: reg8::A }]) = reg; }
+    if r8 != reg8::EA { console[Byte { idx: r8 }] = reg; }
+    else { console[Byte { idx: reg8::A }] = reg; }
 }

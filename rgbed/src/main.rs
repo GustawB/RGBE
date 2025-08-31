@@ -2,6 +2,7 @@ use core::panic;
 use std::{env, i64};
 use std::fs::read;
 use std::collections::HashMap;
+use console::types::{Hookable, Stepable};
 use console::{reg8, types::{Byte}};
 use env_logger::Env;
 use text_io::read;
@@ -22,16 +23,14 @@ struct Debugger {
     break_count: u32,
     started: bool,
     breakpoints: HashMap<u16, String>,
-    console: Console,
 }
 
 impl Debugger {
-    pub fn init(console: Console) -> Debugger {
+    pub fn init() -> Debugger {
         Debugger {
             break_count: 0,
             started: false,
             breakpoints: HashMap::new(),
-            console: console,
         }
     }
 
@@ -118,6 +117,11 @@ impl Debugger {
     }
 }
 
+impl Hookable for Debugger {
+    fn hook(&mut self, console: &Console) {
+        
+    }
+}
 
 // Deassembly ROM:
 // https://www.neviksti.com/DMG/DMG_ROM.asm
@@ -127,7 +131,7 @@ fn main() {
     let filename: &String = &args[1];
     
     let boot_rom: Vec<u8> = read(filename).expect("Failed to read the boot rom");
-    let console: Console = match Console::init(boot_rom) {
+    let mut console: Console = match Console::init(boot_rom) {
         Ok(c) => c,
         Err(msg) => panic!("Failed to create Console: {msg}")
     };
@@ -144,6 +148,8 @@ fn main() {
             )
         }).init();
 
-    let mut debugger: Debugger = Debugger::init(console);
-    debugger.run();
+    let debugger = Debugger::init();
+    console.set_hookable(&debugger);
+
+    console.execute();
 }
