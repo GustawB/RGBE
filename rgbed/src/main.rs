@@ -2,7 +2,7 @@ use core::panic;
 use std::{env, i64};
 use std::fs::read;
 use std::collections::HashMap;
-use console::debug_addr;
+use console::{debug_addr, flag};
 use console::types::Hookable;
 use console::{reg8, types::{Byte}};
 use env_logger::Env;
@@ -111,6 +111,12 @@ impl Debugger {
                 println!("Register: {}; Value: 0x{:02X}", reg8::reg_to_name(reg), console[Byte { idx: reg }]);
             }
         }
+
+        print!("Flags: ");
+        for f in flag::LIST {
+            print!("{}: {}; ", flag::flag_to_name(f), console.is_flag_set(f) as u8);
+        }
+        println!();
     }
 }
 

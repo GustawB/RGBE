@@ -1,2 +1,2 @@
 pub mod console;
-pub use console::{Console, reg8, types, debug_addr};
+pub use console::{Console, reg8, flag, types, debug_addr};

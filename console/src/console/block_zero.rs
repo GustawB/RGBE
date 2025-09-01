@@ -118,7 +118,7 @@ fn cpl(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("CPL"), curr_ip);
 
     console.set_flags(&[flag::N, flag::H]);
-    console[Byte { idx: reg8::A }] = !console[Byte { idx: reg8::A }];
+    console[Byte { idx: reg8::A }] = !console[Byte { idx: reg8::A }]
 }
 
 fn scf(console: &mut Console, curr_ip: u16) {

@@ -106,4 +106,16 @@ pub mod flag {
     pub const N: u8                 = 0x40;
     pub const H: u8                 = 0x20;
     pub const C: u8                 = 0x10;
+
+    pub const LIST: [u8; 4] = [Z, N, H, C];        
+
+    pub fn flag_to_name(flag: u8) -> String {
+        match flag {
+            Z => "Z".to_string(),
+            N => "N".to_string(),
+            H => "H".to_string(),
+            C => "C".to_string(),
+            _ => panic!("Unrecognized flag"),
+        }
+    }
 }
