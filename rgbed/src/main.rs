@@ -17,12 +17,14 @@ mod actions {
     pub const REMOVE_BREAK: char    = 'x';
     pub const STEP: char            = 's';
     pub const DUMP_REGS: char       = 'd';
+    pub const VERBOSE: char         = 'v';
 }
 
 struct Debugger {
     break_count: u32,
     started: bool,
     stepping: bool,
+    verbose: bool,
     breakpoints: HashMap<u16, String>,
 }
 
@@ -32,6 +34,7 @@ impl Debugger {
             break_count: 0,
             started: false,
             stepping: false,
+            verbose: false,
             breakpoints: HashMap::new(),
         }
     }
@@ -63,6 +66,7 @@ impl Debugger {
                     }
                 },
                 actions::DUMP_REGS => Debugger::dump_regs(console),
+                actions::VERBOSE => self.verbose = !self.verbose,
                 _ => println!("Unknown debug command"),
             };
         }
@@ -124,6 +128,9 @@ impl Hookable for Debugger {
     fn hook(&mut self, console: &Console, log: String, addr: u16) {
         if addr != std::u16::MAX {
             debug_addr(addr, log);
+            if self.verbose {
+                Debugger::dump_regs(console);
+            }
         }
 
         self.run(console, addr);
