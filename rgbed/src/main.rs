@@ -124,7 +124,7 @@ impl Hookable for Debugger {
     }
 }
 
-// Deassembly ROM:
+// Dissembly ROM:
 // https://www.neviksti.com/DMG/DMG_ROM.asm
 fn main() {
     let args: Vec<String> = env::args().collect();

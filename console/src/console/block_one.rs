@@ -3,9 +3,7 @@ use crate::console::{helpers::constants::reg8, types::Byte, Console};
 fn ld_r8_r8(src: u8, dest: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("LD {}, {}", reg8::reg_to_name(dest), reg8::reg_to_name(src)), curr_ip);
 
-    let src_val: u8 = console[Byte { idx: src }];
-    let dest_val: &mut u8 = &mut console[Byte { idx: dest }];
-    *dest_val = src_val;
+    console[Byte { idx: dest }] = console[Byte { idx: src }];
 }
 
 
