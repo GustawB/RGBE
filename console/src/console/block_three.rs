@@ -116,7 +116,7 @@ fn push_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
 }
 
 fn ldh_c_a(console: &mut Console, curr_ip: u16) {
-    console.call_hook(format!("LDH C, A"), curr_ip);
+    console.call_hook(format!("LDH [C], A"), curr_ip);
 
     let a_val: u8 = console[Byte { idx: reg8::A }];
     let c_val: u8 = console[Byte { idx: reg8::C }];
@@ -145,7 +145,7 @@ fn load_mem_into_a(addr: u16, console: &mut Console) {
 }
 
 fn ldh_a_c(console: &mut Console, curr_ip: u16) {
-    console.call_hook(format!("LDH A, C"), curr_ip);
+    console.call_hook(format!("LDH A, [C]"), curr_ip);
 
     let c_val: u8 = console[Byte { idx: reg8::C }];
     load_mem_into_a(0xFF00 + c_val as u16, console);
@@ -153,14 +153,14 @@ fn ldh_a_c(console: &mut Console, curr_ip: u16) {
 
 fn ldh_a_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
-    console.call_hook(format!("LDH A, 0x{:04X}", imm8), curr_ip);
+    console.call_hook(format!("LDH A, [0x{:04X}]", imm8), curr_ip);
 
     load_mem_into_a(0xFF00 + imm8 as u16, console);
 }
 
 fn ld_a_imm16(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
-    console.call_hook(format!("LD A, 0x{:04X}", imm16), curr_ip);
+    console.call_hook(format!("LD A, [0x{:04X}]", imm16), curr_ip);
 
     load_mem_into_a(imm16, console);
 }
