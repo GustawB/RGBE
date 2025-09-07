@@ -261,7 +261,7 @@ impl<'a> Console<'a> {
                 },
                 reg16mem::HLD => {
                     self.hl.value -= 1;
-                    self.af.value + 1
+                    self.hl.value + 1
                 },
                 _ => panic!("Index out of range"),
             }
@@ -269,15 +269,15 @@ impl<'a> Console<'a> {
     }
 
     pub fn is_flag_set(&self, flag: u8) -> bool {
-        unsafe { (self.af.halves[1] & (flag as u8))  != 0 }
+        unsafe { (self.af.halves[0] & (flag as u8))  != 0 }
     }
 
     pub fn set_flag(&mut self, flag: u8) {
-        unsafe { self.af.halves[1] = self.af.halves[1] | (flag as u8); }
+        unsafe { self.af.halves[0] = self.af.halves[0] | (flag as u8); }
     }
 
     pub fn clear_flag(&mut self, flag: u8) {
-        unsafe { self.af.halves[1] = self.af.halves[1] & (!(flag as u8)); }
+        unsafe { self.af.halves[0] = self.af.halves[0] & (!(flag as u8)); }
     }
 
     pub fn clear_flags(&mut self, flags: &[u8]) {
