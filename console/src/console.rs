@@ -15,7 +15,11 @@ use crate::{console::{helpers::{constants::{cond, reg16, reg16mem, reg16stk, ADD
 #[cfg(feature = "debugger")]
 use crate::types::Hookable;
 
+use ppu::Ppu;
+
 pub struct Console<'a> {
+    ppu: Ppu,
+
     pub addr_bus: [u8; ADDR_BUS_SIZE],
     af: Register,
     bc: Register,
