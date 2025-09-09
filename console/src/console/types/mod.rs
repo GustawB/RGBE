@@ -5,16 +5,6 @@ pub union Register {
     pub halves: [u8; 2]
 }
 
-pub struct Byte {
-    pub idx: u8,
-}
-pub struct Word {
-    pub idx: u8,
-}
-pub struct WordSTK {
-    pub idx: u8,
-}
-
 pub trait BitFlag {
     const VALUE: u8;
 

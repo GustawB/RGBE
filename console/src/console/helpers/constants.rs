@@ -18,6 +18,36 @@ pub mod cond {
     }   
 }
 
+pub mod intr {
+    pub const VBLANK: u8    = 0b00000001;
+    pub const LCD: u8       = 0b00000010;
+    pub const TIMER: u8     = 0b00000100;
+    pub const SERIAL: u8    = 0b00001000;
+    pub const JOYPAD: u8    = 0b00010000;
+
+    pub fn intr_to_name(mask: u8) -> String {
+        match mask {
+            VBLANK  => "VBLANK".to_string(),
+            LCD     => "LCD".to_string(),
+            TIMER   => "TIMER".to_string(),
+            SERIAL  => "SERIAL".to_string(),
+            JOYPAD  => "JOYPAD".to_string(),
+            _       => panic!("Unrecognized interrupt")
+        }
+    }
+
+    pub fn get_jump_vector(mask: u8) -> u16 {
+        match mask {
+            VBLANK  => 0x40,
+            LCD     => 0x48,
+            TIMER   => 0x50,
+            SERIAL  => 0x58,
+            JOYPAD  => 0x60,
+            _       => panic!("Unrecognized interrupt")
+        }
+    }
+}
+
 pub mod reg8 {
     use core::panic;
 

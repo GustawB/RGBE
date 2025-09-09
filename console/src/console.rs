@@ -7,20 +7,21 @@ mod block_one;
 mod block_two;
 mod block_three;
 
-use std::{marker::PhantomData, ops::{Index, IndexMut}};
+use std::{marker::PhantomData, thread};
 
 pub use crate::console::helpers::constants::{reg8, flag};
 pub use crate::console::helpers::common::debug_addr;
-use crate::{console::{helpers::{constants::{cond, reg16, reg16mem, reg16stk, ADDR_BUS_SIZE, IME}}, types::{Byte, Register, Word, WordSTK}}};
+use crate::{console::{helpers::{constants::{cond, intr, reg16, reg16mem, reg16stk, ADDR_BUS_SIZE, IME}}, types::Register}};
 #[cfg(feature = "debugger")]
 use crate::types::Hookable;
 
+use std::sync::Arc;
+
 use ppu::Ppu;
+use addr_bus::AddrBus;
 
 pub struct Console<'a> {
-    ppu: Ppu,
-
-    pub addr_bus: [u8; ADDR_BUS_SIZE],
+    pub addr_bus: Arc<AddrBus>,
     af: Register,
     bc: Register,
     de: Register,
@@ -50,6 +51,12 @@ static HEADER: [u8; HEADER_SIZE] = [
     //TO BE FILLED
 ];
 
+macro_rules! addr_bus {
+    ($self:ident, $addr:expr) => {
+        $self.addr_bus.lock().unwrap()[$addr]
+    }
+}
+
 impl<'a> Console<'a> {
     pub fn init(boot_rom: Vec<u8>) -> Result<Console<'a>, String> {
         if boot_rom.len() > 0x100 {
@@ -64,8 +71,10 @@ impl<'a> Console<'a> {
                 tmp_addr_bus[0x100 + i] = HEADER[i];
             }
 
+            let addr_bus: AddrBus = AddrBus::new(tmp_addr_bus);
+
             Ok(Console {
-                addr_bus: tmp_addr_bus,
+                addr_bus: Arc::new(addr_bus),
                 af: Register { value: 0 },
                 bc: Register { value: 0 },
                 de: Register { value: 0 },
@@ -86,14 +95,14 @@ impl<'a> Console<'a> {
     }
 
     pub fn fetch_byte(&mut self) -> u8 {
-        let res: u8 = unsafe { self.addr_bus[self.ip.value as usize] };
+        let res: u8 = unsafe { addr_bus!(self, self.ip.value as usize) };
         unsafe { self.ip.value += 1 };
         res
     }
 
     pub fn fetch_two_bytes(&mut self) -> u16 {
-        let a: u8 = unsafe { self.addr_bus[self.ip.value as usize] };
-        let b: u8 = unsafe { self.addr_bus[self.ip.value as usize + 1] };
+        let a: u8 = unsafe { addr_bus!(self, self.ip.value as usize) };
+        let b: u8 = unsafe { addr_bus!(self, self.ip.value as usize + 1) };
         unsafe { self.ip.value += 2 };
         ((b as u16) << 8) | a as u16 // Little endian garbage
     }
@@ -114,17 +123,28 @@ impl<'a> Console<'a> {
         unsafe { self.ip.value }
     }
 
-    pub fn stk_push(&mut self, val: u8) {
-        self[Word { idx: reg16::SP }] -= 1;
-        let sp: u16 = self[Word { idx: reg16::SP }];
-        self.addr_bus[sp as usize] = val;
+    fn stk_push8(&mut self, val: u8) {
+        let sp: u16 = self.get_r16(reg16::SP);
+        self.set_r16(reg16::SP, sp - 1 );
+        addr_bus!(self, sp as usize - 1) = val;
     }
 
-    pub fn stk_pop(&mut self) -> u8 {
-        let sp: u16 = self[Word { idx: reg16::SP }];
-        let res: u8 = self.addr_bus[sp as usize];
-        self[Word { idx: reg16::SP }] += 1;
+    fn stk_pop8(&mut self) -> u8 {
+        let sp: u16 = self.get_r16(reg16::SP);
+        let res: u8 = addr_bus!(self, sp as usize);
+        self.set_r16(reg16::SP, sp + 1);
         res
+    }
+
+    pub fn stk_push16(&mut self, addr: u16) {
+        self.stk_push8((addr >> 8) as u8);
+        self.stk_push8((addr & 0x00FF) as u8);
+    }
+
+    pub fn stk_pop16(&mut self) -> u16 {
+        let low: u16 = self.stk_pop8() as u16;
+        let high: u16 = self.stk_pop8() as u16;
+        low | (high << 8)
     }
 
     fn step(&mut self) {
@@ -146,7 +166,7 @@ impl<'a> Console<'a> {
 
         // TODO: inspect if this is not too soon
         if self.pending_ei {
-            self.addr_bus[IME as usize] = 1;
+            addr_bus!(self, IME as usize) = 1;
             self.pending_ei = false;
         }
     }
@@ -163,91 +183,115 @@ impl<'a> Console<'a> {
     #[cfg(not(feature = "debugger"))]
     pub fn call_hook(&mut  self, _log: String, _curr_ip: u16) {}
 
+    fn handle_interrupt(&mut self, mask: u8) {
+        self.stk_push16(self.get_ip());
+        self.set_ip(intr::get_jump_vector(mask));
+        self.call_hook(intr::intr_to_name(mask), self.get_ip());
+    }
+
     // Entry point of the console.
     pub fn execute(&mut self) {
         self.call_hook("".to_owned(), std::u16::MAX);
+
+        let addr_bus: AddrBus = AddrBus::new([0; ADDR_BUS_SIZE]);
+        let rc = Arc::new(addr_bus);
+        let rc_clone = rc.clone();
+        let handle = thread::spawn(move || {
+            let mut ppu : Ppu = Ppu::new(rc_clone);
+            ppu.execute();
+        });
         
-        loop { self.step(); }
+        loop {
+            let (ime, ie, iflag) = self.addr_bus.get_intr_state();
+            if ime == 1 {
+                for i in 0..5 {
+                    let mask: u8 = 1 << i;
+                    if ie & mask == 1 && iflag & mask == 1{
+                        self.handle_interrupt(mask);
+                        break;
+                    }
+                }
+            }
+
+            self.step();
+        }
+        handle.join().unwrap();
     }
 
-    fn get_r8(&self, idx: u8) -> &u8 {
+    fn get_r8(&self, idx: u8) -> u8 {
         unsafe {
             match idx {
-                reg8::B => &self.bc.halves[1],
-                reg8::C => &self.bc.halves[0],
-                reg8::D => &self.de.halves[1],
-                reg8::E => &self.de.halves[0],
-                reg8::H => &self.hl.halves[1],
-                reg8::L => &self.hl.halves[0],
-                reg8::HL_ADDR => &self.addr_bus[self.hl.value as usize],
-                reg8::A => &self.af.halves[1],
+                reg8::B => self.bc.halves[1],
+                reg8::C => self.bc.halves[0],
+                reg8::D => self.de.halves[1],
+                reg8::E => self.de.halves[0],
+                reg8::H => self.hl.halves[1],
+                reg8::L => self.hl.halves[0],
+                reg8::HL_ADDR => addr_bus!(self, self.hl.value as usize),
+                reg8::A => self.af.halves[1],
                 _ => panic!("Index out of range"),
             }
         }
     }
 
-    fn get_r8_mut(&mut self, idx: u8) -> &mut u8 {
+    fn set_r8(&mut self, idx: u8, val: u8) {
         unsafe {
             match idx {
-                reg8::B => &mut self.bc.halves[1],
-                reg8::C => &mut self.bc.halves[0],
-                reg8::D => &mut self.de.halves[1],
-                reg8::E => &mut self.de.halves[0],
-                reg8::H => &mut self.hl.halves[1],
-                reg8::L => &mut self.hl.halves[0],
-                reg8::HL_ADDR => &mut self.addr_bus[self.hl.value as usize],
-                reg8::A => &mut self.af.halves[1],
+                reg8::B => self.bc.halves[1] = val,
+                reg8::C => self.bc.halves[0] = val,
+                reg8::D => self.de.halves[1] = val,
+                reg8::E => self.de.halves[0] = val,
+                reg8::H => self.hl.halves[1] = val,
+                reg8::L => self.hl.halves[0] = val,
+                reg8::HL_ADDR => addr_bus!(self, self.hl.value as usize)  = val,
+                reg8::A => self.af.halves[1] = val,
+                _ => panic!("Index out of range"),
+            };
+        }
+    }
+
+    fn get_r16(&self, idx: u8) -> u16 {
+        unsafe {
+            match idx {
+                reg16::BC => self.bc.value,
+                reg16::DE => self.de.value,
+                reg16::HL => self.hl.value,
+                reg16::SP => self.sp.value,
                 _ => panic!("Index out of range"),
             }
         }
     }
 
-    fn get_r16(&self, idx: u8) -> &u16 {
-        unsafe {
-            match idx {
-                reg16::BC => &self.bc.value,
-                reg16::DE => &self.de.value,
-                reg16::HL => &self.hl.value,
-                reg16::SP => &self.sp.value,
-                _ => panic!("Index out of range"),
-            }
-        }
+    fn set_r16(&mut self, idx: u8, val: u16) {
+        match idx {
+            reg16::BC => self.bc.value = val,
+            reg16::DE => self.de.value = val,
+            reg16::HL => self.hl.value = val,
+            reg16::SP => self.sp.value = val,
+            _ => panic!("Index out of range"),
+        };
     }
 
-    fn get_r16_mut(&mut self, idx: u8) -> &mut u16 {
+    fn get_r16stk(&self, idx: u8) -> u16 {
         unsafe {
             match idx {
-                reg16::BC => &mut self.bc.value,
-                reg16::DE => &mut self.de.value,
-                reg16::HL => &mut self.hl.value,
-                reg16::SP => &mut self.sp.value,
-                _ => panic!("Index out of range"),
-            }
-        }
-    }
-
-    fn get_r16stk(&self, idx: u8) -> &u16 {
-        unsafe {
-            match idx {
-                reg16stk::BC => &self.bc.value,
-                reg16stk::DE => &self.de.value,
-                reg16stk::HL => &self.hl.value,
-                reg16stk::AF => &self.af.value,
+                reg16stk::BC => self.bc.value,
+                reg16stk::DE => self.de.value,
+                reg16stk::HL => self.hl.value,
+                reg16stk::AF => self.af.value,
                 _ => panic!("Index out of range")
             }
         }
     }
 
-    fn get_r16stk_mut(&mut self, idx: u8) -> &mut u16 {
-        unsafe {
-            match idx {
-                reg16stk::BC => &mut self.bc.value,
-                reg16stk::DE => &mut self.de.value,
-                reg16stk::HL => &mut self.hl.value,
-                reg16stk::AF => &mut self.af.value,
-                _ => panic!("Index out of range")
-            }
-        }
+    fn set_r16stk(&mut self, idx: u8, val: u16) {
+        match idx {
+            reg16stk::BC => self.bc.value = val,
+            reg16stk::DE => self.de.value = val,
+            reg16stk::HL => self.hl.value = val,
+            reg16stk::AF => self.af.value = val,
+            _ => panic!("Index out of range")
+        };
     }
 
     pub fn get_r16mem(&mut self, idx: u8) -> u16 {
@@ -309,47 +353,5 @@ impl<'a> Console<'a> {
             cond::C => self.is_flag_set(flag::C),
             _ => panic!("Invalid flag encountered"), 
         }
-    }
-}
-
-impl<'a> Index<Byte> for Console<'a> {
-    type Output = u8;
-
-    fn index(&self, index: Byte) -> &Self::Output {
-        self.get_r8(index.idx)
-    }
-}
-
-impl<'a> IndexMut<Byte> for Console<'a> {
-    fn index_mut(&mut self, index: Byte) -> &mut Self::Output {
-        self.get_r8_mut(index.idx)
-    }
-}
-
-impl<'a> Index<Word> for Console<'a> {
-    type Output = u16;
-
-    fn index(&self, index: Word) -> &Self::Output {
-        self.get_r16(index.idx)
-    }
-}
-
-impl<'a> IndexMut<Word> for Console<'a> {
-    fn index_mut(&mut self, index: Word) -> &mut Self::Output {
-        self.get_r16_mut(index.idx)
-    }
-}
-
-impl<'a> Index<WordSTK> for Console<'a> {
-    type Output = u16;
-
-    fn index(&self, index: WordSTK) -> &Self::Output {
-        self.get_r16stk(index.idx)
-    }
-}
-
-impl<'a> IndexMut<WordSTK> for Console<'a> {
-    fn index_mut(&mut self, index: WordSTK) -> &mut Self::Output {
-        self.get_r16stk_mut(index.idx)
     }
 }

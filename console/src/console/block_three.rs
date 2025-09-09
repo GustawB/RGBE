@@ -1,12 +1,6 @@
 use core::panic;
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{cond, flag, reg16, reg16stk, reg8, IME}}, types::{BitFlag, Byte, Word, WordSTK, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
-
-fn pop_low_high(console: &mut Console) -> (u16, u16) {
-    let low: u16 = console.stk_pop() as u16;
-    let high: u16 = console.stk_pop() as u16;
-    (low, high)
-}
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{cond, flag, reg16, reg16stk, reg8, IME}}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn arithm_a_imm8<OP: BitFlag, C: BitFlag>(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
@@ -29,8 +23,7 @@ fn cp_a_imm8(console: &mut Console, curr_ip: u16) {
 
 fn ret(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RET"), curr_ip);
-    let (low, high) = pop_low_high(console);
-    console.set_ip(low | (high << 8));
+    console.set_ip(console.stk_pop16());
 }
 
 fn ret_cond(cc: u8, console: &mut Console, curr_ip: u16) {
@@ -72,8 +65,7 @@ fn jp_hl(console: &mut Console, curr_ip: u16) {
 
 fn setup_call(console: &mut Console) {
     let next_instr_addr: u16 = console.get_ip();
-    console.stk_push((next_instr_addr >> 8) as u8);
-    console.stk_push((next_instr_addr & 0x00FF) as u8);
+    console.stk_push16(next_instr_addr);
 }
 
 fn call_imm16(console: &mut Console, curr_ip: u16) {
@@ -103,16 +95,14 @@ fn rst_tgt3(tgt3: u8, console: &mut Console, curr_ip: u16) {
 fn pop_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("POP {}", reg16stk::reg_to_name(r16stk)), curr_ip);
 
-    let (low, high) = pop_low_high(console);
-    console[WordSTK { idx: r16stk }] = low | (high << 8);
+    console[WordSTK { idx: r16stk }] = console.stk_pop16();
 }
 
 fn push_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("PUSH {}", reg16stk::reg_to_name(r16stk)), curr_ip);
 
     let val: u16 = console[WordSTK { idx: r16stk }];
-    console.stk_push((val >> 8) as u8);
-    console.stk_push((val & 0x00FF) as u8);
+    console.stk_push16(val);
 }
 
 fn ldh_c_a(console: &mut Console, curr_ip: u16) {
