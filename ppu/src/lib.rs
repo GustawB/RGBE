@@ -2,8 +2,6 @@ use std::{sync::Arc, time::Duration};
 
 use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, video::Window, Sdl};
 
-use addr_bus::AddrBus;
-
 pub struct Ppu {
     context: Sdl,
     canvas: Canvas<Window>,
@@ -11,7 +9,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(addr_bus: Arc<AddrBus>) -> Ppu {
+    pub fn new() -> Ppu {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
 
@@ -24,7 +22,6 @@ impl Ppu {
         Ppu {
             context: sdl_context,
             canvas: canvas,
-            //addr_bus: addr_bus,
         }
     }
 

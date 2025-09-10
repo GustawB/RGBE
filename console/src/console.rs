@@ -9,19 +9,45 @@ mod block_three;
 
 use std::{marker::PhantomData, thread};
 
+use crate::console::helpers::constants::IME;
 pub use crate::console::helpers::constants::{reg8, flag};
 pub use crate::console::helpers::common::debug_addr;
-use crate::{console::{helpers::{constants::{cond, intr, reg16, reg16mem, reg16stk, ADDR_BUS_SIZE, IME}}, types::Register}};
+use crate::{console::{helpers::{constants::{cond, intr, reg16, reg16mem, reg16stk}}, types::Register}};
 #[cfg(feature = "debugger")]
 use crate::types::Hookable;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use ppu::Ppu;
-use addr_bus::AddrBus;
+
+const ROM0_BASE: usize = 0x0;
+const ROM1_BASE: usize = 0x4000;
+const VRAM_BASE: usize = 0x8000;
+const ERAM_BASE: usize = 0xA000;
+const WRAM_BASE: usize = 0xC000;
+const UNUSED_RAM_BASE: usize = 0xD000;
+const OAM_BASE: usize = 0xFE00;
+const PROHIBITED_BASE: usize = 0xFEA0;
+const IO_REGS_BASE: usize = 0xFF00;
+const HRAM_BASE: usize = 0xFF80;
+const IE: usize = 0xFFFF;
+
+const PALETTES_BASE: usize = 0xFF47;
+const PALETTES_END: usize = 0xFF50;
 
 pub struct Console<'a> {
-    pub addr_bus: Arc<AddrBus>,
+    rom_bank_0: [u8; 0x4000],
+    rom_bank_1: [u8; 0x4000],
+    vram: Arc<Mutex<[u8; 0x2000]>>,
+    eram: [u8; 0x2000],
+    wram: [u8; 0x1000],
+    oam: Arc<Mutex<[u8; 0x100]>>,
+    io_regs: Arc<Mutex<[u8; 0x80]>>,
+    hram: [u8; 0x7F],
+    ie: Arc<Mutex<u8>>,
+
+    palettes_lock: Mutex<()>,
+
     af: Register,
     bc: Register,
     de: Register,
@@ -51,30 +77,33 @@ static HEADER: [u8; HEADER_SIZE] = [
     //TO BE FILLED
 ];
 
-macro_rules! addr_bus {
-    ($self:ident, $addr:expr) => {
-        $self.addr_bus.lock().unwrap()[$addr]
-    }
-}
-
 impl<'a> Console<'a> {
     pub fn init(boot_rom: Vec<u8>) -> Result<Console<'a>, String> {
         if boot_rom.len() > 0x100 {
             Err(String::from("Boot rom too long"))
         } else {
-            let mut tmp_addr_bus = [0; ADDR_BUS_SIZE];
+            let mut tmp_rom_bank_0 = [0; 0x4000];
             for i in 0..boot_rom.len() {
-                tmp_addr_bus[i] = boot_rom[i];
+                tmp_rom_bank_0[i] = boot_rom[i];
             }
 
             for i in 0..HEADER_SIZE {
-                tmp_addr_bus[0x100 + i] = HEADER[i];
+                tmp_rom_bank_0[0x100 + i] = HEADER[i];
             }
 
-            let addr_bus: AddrBus = AddrBus::new(tmp_addr_bus);
-
             Ok(Console {
-                addr_bus: Arc::new(addr_bus),
+                rom_bank_0: tmp_rom_bank_0,
+                rom_bank_1: [0; 0x4000],
+                vram: Arc::new(Mutex::new([0; 0x2000])),
+                eram: [0; 0x2000],
+                wram: [0; 0x1000],
+                oam: Arc::new(Mutex::new([0; 0x100])),
+                io_regs: Arc::new(Mutex::new([0; 0x80])),
+                hram: [0; 0x7F],
+                ie: Arc::new(Mutex::new(0)),
+
+                palettes_lock: Mutex::new(()),
+
                 af: Register { value: 0 },
                 bc: Register { value: 0 },
                 de: Register { value: 0 },
@@ -95,14 +124,14 @@ impl<'a> Console<'a> {
     }
 
     pub fn fetch_byte(&mut self) -> u8 {
-        let res: u8 = unsafe { addr_bus!(self, self.ip.value as usize) };
+        let res: u8 = unsafe { self.get_mem(self.ip.value as usize) };
         unsafe { self.ip.value += 1 };
         res
     }
 
     pub fn fetch_two_bytes(&mut self) -> u16 {
-        let a: u8 = unsafe { addr_bus!(self, self.ip.value as usize) };
-        let b: u8 = unsafe { addr_bus!(self, self.ip.value as usize + 1) };
+        let a: u8 = unsafe { self.get_mem(self.ip.value as usize) };
+        let b: u8 = unsafe { self.get_mem(self.ip.value as usize + 1) };
         unsafe { self.ip.value += 2 };
         ((b as u16) << 8) | a as u16 // Little endian garbage
     }
@@ -126,12 +155,12 @@ impl<'a> Console<'a> {
     fn stk_push8(&mut self, val: u8) {
         let sp: u16 = self.get_r16(reg16::SP);
         self.set_r16(reg16::SP, sp - 1 );
-        addr_bus!(self, sp as usize - 1) = val;
+        self.set_mem(sp as usize - 1, val);
     }
 
     fn stk_pop8(&mut self) -> u8 {
         let sp: u16 = self.get_r16(reg16::SP);
-        let res: u8 = addr_bus!(self, sp as usize);
+        let res: u8 = self.get_mem(sp as usize);
         self.set_r16(reg16::SP, sp + 1);
         res
     }
@@ -166,7 +195,7 @@ impl<'a> Console<'a> {
 
         // TODO: inspect if this is not too soon
         if self.pending_ei {
-            addr_bus!(self, IME as usize) = 1;
+            self.set_mem(IME as usize, 1);
             self.pending_ei = false;
         }
     }
@@ -193,7 +222,6 @@ impl<'a> Console<'a> {
     pub fn execute(&mut self) {
         self.call_hook("".to_owned(), std::u16::MAX);
 
-        let addr_bus: AddrBus = AddrBus::new([0; ADDR_BUS_SIZE]);
         let rc = Arc::new(addr_bus);
         let rc_clone = rc.clone();
         let handle = thread::spawn(move || {
@@ -227,7 +255,7 @@ impl<'a> Console<'a> {
                 reg8::E => self.de.halves[0],
                 reg8::H => self.hl.halves[1],
                 reg8::L => self.hl.halves[0],
-                reg8::HL_ADDR => addr_bus!(self, self.hl.value as usize),
+                reg8::HL_ADDR => self.get_mem(self.hl.value as usize),
                 reg8::A => self.af.halves[1],
                 _ => panic!("Index out of range"),
             }
@@ -243,7 +271,7 @@ impl<'a> Console<'a> {
                 reg8::E => self.de.halves[0] = val,
                 reg8::H => self.hl.halves[1] = val,
                 reg8::L => self.hl.halves[0] = val,
-                reg8::HL_ADDR => addr_bus!(self, self.hl.value as usize)  = val,
+                reg8::HL_ADDR => self.set_mem(self.hl.value as usize, val),
                 reg8::A => self.af.halves[1] = val,
                 _ => panic!("Index out of range"),
             };
@@ -353,5 +381,81 @@ impl<'a> Console<'a> {
             cond::C => self.is_flag_set(flag::C),
             _ => panic!("Invalid flag encountered"), 
         }
+    }
+
+    pub fn get_mem(&self, addr: usize) -> u8 {
+        match addr {
+            (ROM0_BASE..ROM1_BASE) => self.rom_bank_0[addr],
+            (ROM1_BASE..VRAM_BASE) => self.rom_bank_1[addr - ROM1_BASE],
+            (VRAM_BASE..ERAM_BASE) => {
+                match self.vram.try_lock() {
+                    Ok(guard) => guard[addr - VRAM_BASE],
+                    Err(_) => 0xFF, // garbage value
+                }
+            },
+            (ERAM_BASE..WRAM_BASE) => self.eram[addr - ERAM_BASE],
+            (WRAM_BASE..UNUSED_RAM_BASE) => self.wram[addr - WRAM_BASE], 
+            (OAM_BASE..PROHIBITED_BASE) => {
+                match self.oam.try_lock() {
+                    Ok(guard) => guard[addr - OAM_BASE],
+                    Err(_) => 0xFF // garbage value,
+                }
+            },
+            (IO_REGS_BASE..HRAM_BASE) => {
+                if (PALETTES_BASE..PALETTES_END).contains(&addr) {
+                    match self.palettes_lock.try_lock() {
+                        Ok(_) => self.io_regs.lock().unwrap()[addr - IO_REGS_BASE],
+                        Err(_) => 0xFF, // garbage value
+                    }
+                } else {
+                    self.io_regs.lock().unwrap()[addr - IO_REGS_BASE]
+                }
+            },
+            (HRAM_BASE..IE) => self.hram[addr - HRAM_BASE],
+            IE => *self.ie.lock().unwrap(),
+            _ => panic!("Invalid address")
+        }
+    }
+
+    pub fn set_mem(&mut self, addr: usize, val: u8) {
+        match addr {
+            (ROM0_BASE..ROM1_BASE) => {
+                self.rom_bank_0[addr] = val;
+            }
+            (ROM1_BASE..VRAM_BASE) => {
+                self.rom_bank_1[addr - ROM1_BASE] = val;
+            },
+            (VRAM_BASE..ERAM_BASE) => {
+                match self.vram.try_lock() {
+                    Ok(mut guard) => guard[addr - VRAM_BASE] = val,
+                    Err(_) => (),
+                };
+            },
+            (ERAM_BASE..WRAM_BASE) => {
+                self.eram[addr - ERAM_BASE] = val;
+            },
+            (WRAM_BASE..UNUSED_RAM_BASE) => {
+                self.wram[addr - WRAM_BASE] = val;
+            },
+            (OAM_BASE..PROHIBITED_BASE) => {
+                match self.oam.try_lock() {
+                    Ok(mut guard) => guard[addr - OAM_BASE] = val,
+                    Err(_) => (),
+                }
+            },
+            (IO_REGS_BASE..HRAM_BASE) => {
+                if (PALETTES_BASE..PALETTES_END).contains(&addr) {
+                    match self.palettes_lock.try_lock() {
+                        Ok(_) => self.io_regs.lock().unwrap()[addr - IO_REGS_BASE] = val,
+                        Err(_) => (),
+                    }
+                } else {
+                    self.io_regs.lock().unwrap()[addr - IO_REGS_BASE] = val;
+                }
+            },
+            (HRAM_BASE..IE) => self.hram[addr - HRAM_BASE] = val,
+            IE => *self.ie.lock().unwrap() = val,
+            _ => panic!("Invalid address")
+        };
     }
 }
