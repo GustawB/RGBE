@@ -1,6 +1,3 @@
-pub const ADDR_BUS_SIZE: usize  = 65535;
-pub const IME: u16              = 0xFFFE;
-
 pub mod cond {
     pub const NZ: u8    = 0;
     pub const Z: u8     = 1;

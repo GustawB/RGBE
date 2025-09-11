@@ -8,8 +8,8 @@ mod block_two;
 mod block_three;
 
 use std::marker::PhantomData;
+use std::thread;
 
-use crate::console::helpers::constants::IME;
 pub use crate::console::helpers::constants::{reg8, flag};
 pub use crate::console::helpers::common::debug_addr;
 use crate::{console::{helpers::{constants::{cond, intr, reg16, reg16mem, reg16stk}}, types::Register}};
@@ -34,6 +34,8 @@ const IE: usize = 0xFFFF;
 
 const PALETTES_BASE: usize = 0xFF47;
 const PALETTES_END: usize = 0xFF50;
+
+const IF: usize = 0xFF0F;
 
 pub struct Console<'a> {
     rom_bank_0: [u8; 0x4000],
@@ -197,7 +199,7 @@ impl<'a> Console<'a> {
 
         // TODO: inspect if this is not too soon
         if self.pending_ei {
-            self.set_mem(IME as usize, 1);
+            self.set_ime(1);
             self.pending_ei = false;
         }
     }
@@ -231,28 +233,29 @@ impl<'a> Console<'a> {
     pub fn execute(&mut self) {
         self.call_hook("".to_owned(), std::u16::MAX);
 
-        /*let rc = Arc::new(addr_bus);
-        let rc_clone = rc.clone();
+        let vram = self.vram.clone();
+        let oam = self.oam.clone();
+        let io_regs = self.io_regs.clone();
         let handle = thread::spawn(move || {
-            let mut ppu : Ppu = Ppu::new(rc_clone);
+            let mut ppu : Ppu = Ppu::new(vram, oam, io_regs);
             ppu.execute();
-        });*/
+        });
         
         loop {
-            /*let (ime, ie, iflag) = self.addr_bus.get_intr_state();
-            if ime == 1 {
+            if self.ime == 1 {
                 for i in 0..5 {
                     let mask: u8 = 1 << i;
-                    if ie & mask == 1 && iflag & mask == 1{
+                    if *self.ie.lock().unwrap() & mask == 1 &&
+                        self.io_regs.lock().unwrap()[IF - IO_REGS_BASE] & mask == 1{
                         self.handle_interrupt(mask);
                         break;
                     }
                 }
-            }*/
+            }
 
             self.step();
         }
-        //handle.join().unwrap();
+        handle.join().unwrap();
     }
 
     pub fn get_r8(&self, idx: u8) -> u8 {

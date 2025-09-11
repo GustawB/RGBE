@@ -1,15 +1,17 @@
-use std::{sync::Arc, time::Duration};
+use std::{sync::{Arc, Mutex}, time::Duration};
 
 use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, video::Window, Sdl};
 
 pub struct Ppu {
     context: Sdl,
     canvas: Canvas<Window>,
-    //vram: []
+    vram: Arc<Mutex<[u8; 0x2000]>>,
+    oam: Arc<Mutex<[u8; 0x100]>>,
+    io_regs: Arc<Mutex<[u8; 0x80]>>,
 }
 
 impl Ppu {
-    pub fn new() -> Ppu {
+    pub fn new(vram: Arc<Mutex<[u8; 0x2000]>>, oam: Arc<Mutex<[u8; 0x100]>>, io_regs: Arc<Mutex<[u8; 0x80]>>) -> Ppu {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
 
@@ -22,6 +24,9 @@ impl Ppu {
         Ppu {
             context: sdl_context,
             canvas: canvas,
+            vram: vram,
+            oam: oam,
+            io_regs: io_regs,
         }
     }
 
