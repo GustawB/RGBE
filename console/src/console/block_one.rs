@@ -1,9 +1,9 @@
-use crate::console::{helpers::constants::reg8, types::Byte, Console};
+use crate::console::{helpers::constants::reg8, Console};
 
 fn ld_r8_r8(src: u8, dest: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("LD {}, {}", reg8::reg_to_name(dest), reg8::reg_to_name(src)), curr_ip);
 
-    console[Byte { idx: dest }] = console[Byte { idx: src }];
+    console.set_r8(dest, console.get_r8(src));
 }
 
 

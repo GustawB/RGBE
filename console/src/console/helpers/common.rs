@@ -38,7 +38,7 @@ pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut 
         // If op with carry, like ADC, and Carry is set, increment the operand.
         operand += 1;
     }
-    let mut a_val: u8 = console[Byte { idx: reg8::A }];
+    let mut a_val: u8 = console.get_r8(reg8::A);
     match OP::VALUE {
         ADD_VAL => a_val += operand,
         SUB_VAL => a_val -= operand,
@@ -58,11 +58,11 @@ pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut 
         _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
     }
     console.clear_or_set_flag(a_val == 0, flag::Z);
-    *(&mut console[Byte { idx: reg8::A }]) = a_val;
+    console.set_r8(reg8::A, a_val);
 }
 
 pub fn logic_a_operand<OP: BitFlag>(operand: u8, console: &mut Console) {
-    let mut a_val: u8 = console[Byte { idx: reg8::A }];
+    let mut a_val: u8 = console.get_r8(reg8::A);
      match OP::VALUE {
         AND_VAL => a_val &= operand,
         XOR_VAL => a_val ^= operand,
@@ -73,11 +73,11 @@ pub fn logic_a_operand<OP: BitFlag>(operand: u8, console: &mut Console) {
     console.clear_or_set_flag(a_val == 0, flag::Z);
     console.clear_or_set_flag(OP::VALUE == 2, flag::H);
     console.clear_flags(&[flag::N, flag::C]);
-    *(&mut console[Byte { idx: reg8::A }]) = a_val;
+    console.set_r8(reg8::A, a_val);
 }
 
 pub fn cp_a_operand(operand: u8, console: &mut Console) {
-    let a_val: u8 = console[Byte { idx: reg8::A }];
+    let a_val: u8 = console.get_r8(reg8::A);
     console.clear_or_set_flag(a_val == operand, flag::Z);
     console.set_flag( flag::N);
     console.clear_or_set_flag(half_carry::sub_8(a_val, operand), flag::H);
@@ -89,8 +89,8 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, c
     let curr_c: u8 = console.is_flag_set(flag::C) as u8;
 
     let mut reg: u8;
-    if r8 != reg8::EA { reg = console[Byte { idx: r8 }]; }
-    else { reg = console[Byte { idx: reg8::A }]; }
+    if r8 != reg8::EA { reg = console.get_r8(r8); }
+    else { reg = console.get_r8(reg8::A); }
 
     let c: u8;
     match DIR::VALUE {
@@ -136,6 +136,6 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, c
     console.clear_or_set_flag(reg == 0 && r8 != reg8::EA, flag::Z);
     console.clear_or_set_flag(c != 0, flag::C);
 
-    if r8 != reg8::EA { console[Byte { idx: r8 }] = reg; }
-    else { console[Byte { idx: reg8::A }] = reg; }
+    if r8 != reg8::EA { console.set_r8(r8, reg); }
+    else { console.set_r8(reg8::A, reg); }
 }

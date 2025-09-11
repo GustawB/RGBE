@@ -4,7 +4,7 @@ use std::fs::read;
 use std::collections::HashMap;
 use console::{debug_addr, flag};
 use console::types::Hookable;
-use console::{reg8, types::{Byte}};
+use console::reg8;
 use env_logger::Env;
 use text_io::read;
 use std::io::Write;
@@ -112,7 +112,7 @@ impl Debugger {
         println!("REG8 DUMP:");
         for reg in reg8::LIST {
             if reg != reg8::HL_ADDR && reg != reg8::EA {
-                println!("Register: {}; Value: 0x{:02X}", reg8::reg_to_name(reg), console[Byte { idx: reg }]);
+                println!("Register: {}; Value: 0x{:02X}", reg8::reg_to_name(reg), console.get_r8(reg));
             }
         }
 

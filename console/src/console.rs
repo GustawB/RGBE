@@ -7,7 +7,7 @@ mod block_one;
 mod block_two;
 mod block_three;
 
-use std::{marker::PhantomData, thread};
+use std::marker::PhantomData;
 
 use crate::console::helpers::constants::IME;
 pub use crate::console::helpers::constants::{reg8, flag};
@@ -45,6 +45,7 @@ pub struct Console<'a> {
     io_regs: Arc<Mutex<[u8; 0x80]>>,
     hram: [u8; 0x7F],
     ie: Arc<Mutex<u8>>,
+    ime: u8,
 
     palettes_lock: Mutex<()>,
 
@@ -101,6 +102,7 @@ impl<'a> Console<'a> {
                 io_regs: Arc::new(Mutex::new([0; 0x80])),
                 hram: [0; 0x7F],
                 ie: Arc::new(Mutex::new(0)),
+                ime: 0,
 
                 palettes_lock: Mutex::new(()),
 
@@ -218,19 +220,26 @@ impl<'a> Console<'a> {
         self.call_hook(intr::intr_to_name(mask), self.get_ip());
     }
 
+    pub fn set_ime(&mut self, val: u8) {
+        match val {
+            0 => self.ime = 0,
+            _ => self.ime = 1,
+        }
+    }
+
     // Entry point of the console.
     pub fn execute(&mut self) {
         self.call_hook("".to_owned(), std::u16::MAX);
 
-        let rc = Arc::new(addr_bus);
+        /*let rc = Arc::new(addr_bus);
         let rc_clone = rc.clone();
         let handle = thread::spawn(move || {
             let mut ppu : Ppu = Ppu::new(rc_clone);
             ppu.execute();
-        });
+        });*/
         
         loop {
-            let (ime, ie, iflag) = self.addr_bus.get_intr_state();
+            /*let (ime, ie, iflag) = self.addr_bus.get_intr_state();
             if ime == 1 {
                 for i in 0..5 {
                     let mask: u8 = 1 << i;
@@ -239,14 +248,14 @@ impl<'a> Console<'a> {
                         break;
                     }
                 }
-            }
+            }*/
 
             self.step();
         }
-        handle.join().unwrap();
+        //handle.join().unwrap();
     }
 
-    fn get_r8(&self, idx: u8) -> u8 {
+    pub fn get_r8(&self, idx: u8) -> u8 {
         unsafe {
             match idx {
                 reg8::B => self.bc.halves[1],

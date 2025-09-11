@@ -5,7 +5,7 @@ use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::C
 pub struct Ppu {
     context: Sdl,
     canvas: Canvas<Window>,
-    //addr_bus: Arc<AddrBus>,
+    //vram: []
 }
 
 impl Ppu {

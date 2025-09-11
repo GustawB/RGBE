@@ -1,6 +1,6 @@
 use core::panic;
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{cond, flag, reg16, reg16stk, reg8, IME}}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{cond, flag, reg16, reg16stk, reg8}}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn arithm_a_imm8<OP: BitFlag, C: BitFlag>(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
@@ -23,7 +23,8 @@ fn cp_a_imm8(console: &mut Console, curr_ip: u16) {
 
 fn ret(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RET"), curr_ip);
-    console.set_ip(console.stk_pop16());
+    let ip: u16 = console.stk_pop16();
+    console.set_ip(ip);
 }
 
 fn ret_cond(cc: u8, console: &mut Console, curr_ip: u16) {
@@ -38,7 +39,7 @@ fn reti(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RETI"), curr_ip);
 
     ret(console, curr_ip);
-    console.addr_bus[IME as usize] = 1;
+    console.set_ime(1);
 }
 
 fn jp_cc_imm16(cc: u8, console: &mut Console, curr_ip: u16) {
@@ -59,7 +60,7 @@ fn jp_imm16(console: &mut Console, curr_ip: u16) {
 fn jp_hl(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("JP HL"), curr_ip);
 
-    let hl_val: u16 = console[Word { idx: reg16::HL }];
+    let hl_val: u16 = console.get_r16(reg16::HL);
     console.set_ip(hl_val);
 }
 
@@ -95,49 +96,50 @@ fn rst_tgt3(tgt3: u8, console: &mut Console, curr_ip: u16) {
 fn pop_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("POP {}", reg16stk::reg_to_name(r16stk)), curr_ip);
 
-    console[WordSTK { idx: r16stk }] = console.stk_pop16();
+    let popped: u16 = console.stk_pop16();
+    console.set_r16stk(r16stk, popped);
 }
 
 fn push_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("PUSH {}", reg16stk::reg_to_name(r16stk)), curr_ip);
 
-    let val: u16 = console[WordSTK { idx: r16stk }];
+    let val: u16 = console.get_r16stk(r16stk);
     console.stk_push16(val);
 }
 
 fn ldh_c_a(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("LDH [C], A"), curr_ip);
 
-    let a_val: u8 = console[Byte { idx: reg8::A }];
-    let c_val: u8 = console[Byte { idx: reg8::C }];
-    console.addr_bus[(0xFF00 + c_val as u16) as usize] = a_val;
+    let a_val: u8 = console.get_r8(reg8::A);
+    let c_val: u8 = console.get_r8(reg8::C);
+    console.set_mem((0xFF00 + c_val as u16) as usize, a_val);
 }
 
 fn ldh_imm8_a(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     console.call_hook(format!("LDH [0x{:04X}], A", imm8), curr_ip);
 
-    let a_val: u8 = console[Byte { idx: reg8::A }];
-    console.addr_bus[(0xFF00 + imm8 as u16) as usize] = a_val;
+    let a_val: u8 = console.get_r8(reg8::A);
+    console.set_mem((0xFF00 + imm8 as u16) as usize, a_val);
 }
 
 fn ld_imm16_a(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     console.call_hook(format!("LD [0x{:04X}], A", imm16), curr_ip);
 
-    let a_val: u8 = console[Byte { idx: reg8::A }];
-    console.addr_bus[imm16 as usize] = a_val;
+    let a_val: u8 = console.get_r8(reg8::A);
+    console.set_mem(imm16 as usize, a_val);
 }
 
 fn load_mem_into_a(addr: u16, console: &mut Console) {
-    let addr_val: u8 = console.addr_bus[addr as usize];
-    console[Byte { idx: reg8::A }] = addr_val;
+    let addr_val: u8 = console.get_mem(addr as usize);
+    console.set_r8(reg8::A, addr_val);
 }
 
 fn ldh_a_c(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("LDH A, [C]"), curr_ip);
 
-    let c_val: u8 = console[Byte { idx: reg8::C }];
+    let c_val: u8 = console.get_r8(reg8::C);
     load_mem_into_a(0xFF00 + c_val as u16, console);
 }
 
@@ -157,10 +159,10 @@ fn ld_a_imm16(console: &mut Console, curr_ip: u16) {
 
 fn add_sp_imm8_logless(console: &mut Console, imm8: u8) -> u16 {
     console.clear_flags(&[flag::Z, flag::N]);
-    let sp_val: u16 = console[Word { idx: reg16::SP }];
+    let sp_val: u16 = console.get_r16(reg16::SP);
     console.clear_or_set_flag(half_carry::add_16(sp_val, imm8 as u16), flag::H);
     console.clear_or_set_flag(carry::add_16(sp_val, imm8 as u16), flag::C);
-    console[Word { idx: reg16::SP }] = sp_val + imm8 as u16;
+    console.set_r16(reg16::SP, sp_val + imm8 as u16);
     sp_val + imm8 as u16
 }
 
@@ -176,19 +178,19 @@ fn ld_hl_sp_imm8(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("LD HL, SP+0x{:04X}", imm8), curr_ip);
 
     let tmp: u16 = add_sp_imm8_logless(console, imm8);
-    console[Word { idx: reg16::HL }] = tmp;
+    console.set_r16(reg16::HL, tmp);
 }
 
 fn ld_sp_hl(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("LD SP, HL"), curr_ip);
 
-    let hl_val: u16 = console[Word { idx: reg16::HL }];
-    console[Word { idx: reg16::SP }] = hl_val;
+    let hl_val: u16 = console.get_r16(reg16::HL);
+    console.set_r16(reg16::SP, hl_val);
 }
 
 fn di(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("DI"), curr_ip);
-    console.addr_bus[IME as usize] = 0;
+    console.set_ime(0);
 }
 
 fn ei(console: &mut Console, curr_ip: u16) {
