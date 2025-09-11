@@ -1,6 +1,8 @@
 use core::panic;
 
-use crate::console::{helpers::{common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::reg8}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
+use constants::reg8;
+
+use crate::console::{helpers::{common::{arithm_a_operand, cp_a_operand, logic_a_operand}}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn arithm_a_r8<OP: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, curr_ip: u16) {
     arithm_a_operand::<OP, C>(console.get_r8(r8), console, r8, curr_ip);

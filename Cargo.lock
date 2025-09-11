@@ -83,10 +83,15 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 name = "console"
 version = "0.1.0"
 dependencies = [
+ "constants",
  "env_logger",
  "log",
  "ppu",
 ]
+
+[[package]]
+name = "constants"
+version = "0.1.0"
 
 [[package]]
 name = "env_filter"
@@ -252,6 +257,7 @@ name = "rgbed"
 version = "0.1.0"
 dependencies = [
  "console",
+ "constants",
  "env_logger",
  "log",
  "text_io",

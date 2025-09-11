@@ -1,6 +1,7 @@
+use constants::{flag, reg8};
 use log::debug;
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, constants::{flag, reg8}}, types::{BitFlag, ADD_VAL, AND_VAL, CARRY_VAL, LEFT_VAL, NO_CARRY_VAL, OR_VAL, RIGHT_VAL, SUB_VAL, XOR_VAL}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}}, types::{BitFlag, ADD_VAL, AND_VAL, CARRY_VAL, LEFT_VAL, NO_CARRY_VAL, OR_VAL, RIGHT_VAL, SUB_VAL, XOR_VAL}, Console};
 
 fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &mut Console, operand: u8, arg_type: usize, curr_ip: u16) {
     let arg: String = match arg_type {

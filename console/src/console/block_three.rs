@@ -1,6 +1,8 @@
 use core::panic;
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}, constants::{cond, flag, reg16, reg16stk, reg8}}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
+use constants::{cond, flag, reg16, reg16stk, reg8};
+
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn arithm_a_imm8<OP: BitFlag, C: BitFlag>(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();

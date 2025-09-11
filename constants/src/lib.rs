@@ -1,3 +1,20 @@
+pub const ROM0_BASE: usize = 0x0;
+pub const ROM1_BASE: usize = 0x4000;
+pub const VRAM_BASE: usize = 0x8000;
+pub const ERAM_BASE: usize = 0xA000;
+pub const WRAM_BASE: usize = 0xC000;
+pub const UNUSED_RAM_BASE: usize = 0xD000;
+pub const OAM_BASE: usize = 0xFE00;
+pub const PROHIBITED_BASE: usize = 0xFEA0;
+pub const IO_REGS_BASE: usize = 0xFF00;
+pub const HRAM_BASE: usize = 0xFF80;
+pub const IE: usize = 0xFFFF;
+
+pub const PALETTES_BASE: usize = 0xFF47;
+pub const PALETTES_END: usize = 0xFF50;
+
+pub const IF: usize = 0xFF0F;
+
 pub mod cond {
     pub const NZ: u8    = 0;
     pub const Z: u8     = 1;

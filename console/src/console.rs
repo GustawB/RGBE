@@ -10,32 +10,15 @@ mod block_three;
 use std::marker::PhantomData;
 use std::thread;
 
-pub use crate::console::helpers::constants::{reg8, flag};
 pub use crate::console::helpers::common::debug_addr;
-use crate::{console::{helpers::{constants::{cond, intr, reg16, reg16mem, reg16stk}}, types::Register}};
+use crate::console::types::Register;
 #[cfg(feature = "debugger")]
 use crate::types::Hookable;
 
 use std::sync::{Arc, Mutex};
 
+use constants::{cond, flag, intr, reg16, reg16mem, reg16stk, reg8, ERAM_BASE, HRAM_BASE, IE, IF, IO_REGS_BASE, OAM_BASE, PALETTES_BASE, PALETTES_END, PROHIBITED_BASE, ROM0_BASE, ROM1_BASE, UNUSED_RAM_BASE, VRAM_BASE, WRAM_BASE};
 use ppu::Ppu;
-
-const ROM0_BASE: usize = 0x0;
-const ROM1_BASE: usize = 0x4000;
-const VRAM_BASE: usize = 0x8000;
-const ERAM_BASE: usize = 0xA000;
-const WRAM_BASE: usize = 0xC000;
-const UNUSED_RAM_BASE: usize = 0xD000;
-const OAM_BASE: usize = 0xFE00;
-const PROHIBITED_BASE: usize = 0xFEA0;
-const IO_REGS_BASE: usize = 0xFF00;
-const HRAM_BASE: usize = 0xFF80;
-const IE: usize = 0xFFFF;
-
-const PALETTES_BASE: usize = 0xFF47;
-const PALETTES_END: usize = 0xFF50;
-
-const IF: usize = 0xFF0F;
 
 pub struct Console<'a> {
     rom_bank_0: [u8; 0x4000],
