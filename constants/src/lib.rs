@@ -14,6 +14,14 @@ pub const PALETTES_BASE: usize = 0xFF47;
 pub const PALETTES_END: usize = 0xFF50;
 
 pub const IF: usize = 0xFF0F;
+pub const LY: usize = 0xFF44;
+pub const LCDC: usize = 0xFF40;
+pub const SCX: usize = 0xFF42;
+pub const SCY: usize = 0xFF43;
+pub const WX: usize =  0xFF4A;
+pub const WY: usize = 0xFF4B;
+
+pub const OAM_SIZE: usize = 0xA0;
 
 pub mod cond {
     pub const NZ: u8    = 0;

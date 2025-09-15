@@ -195,6 +195,7 @@ dependencies = [
 name = "ppu"
 version = "0.1.0"
 dependencies = [
+ "constants",
  "sdl2",
 ]
 

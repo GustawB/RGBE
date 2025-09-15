@@ -328,7 +328,7 @@ impl<'a> Console<'a> {
                 },
                 reg16mem::HLD => {
                     self.hl.value -= 1;
-                    self.hl.value + 1
+                    self.hl.value
                 },
                 _ => panic!("Index out of range"),
             }
