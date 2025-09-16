@@ -138,7 +138,7 @@ impl Ppu {
     }
 
     fn mode1() {
-        ::std::thread::sleep(Duration::from_millis(10000));
+        ::std::thread::sleep(Duration::from_millis(100));
     }
 
     pub fn execute(&mut self) {

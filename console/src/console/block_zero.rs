@@ -34,12 +34,12 @@ fn ld_imm16_sp(console: &mut Console, curr_ip: u16) {
 
 fn inc_r16(r16: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("INC {}", reg16::reg_to_name(r16)), curr_ip);
-    console.set_r16(r16,  console.get_r16(r16) + 1);
+    console.set_r16(r16,  console.get_r16(r16).wrapping_add(1));
 }
 
 fn dec_r16(r16: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("INC {}", reg16::reg_to_name(r16)), curr_ip);
-    console.set_r16(r16,  console.get_r16(r16) - 1);
+    console.set_r16(r16,  console.get_r16(r16).wrapping_sub(1));
 }
 
 fn add_hl_r16(r16: u8, console: &mut Console, curr_ip: u16) {
@@ -47,7 +47,7 @@ fn add_hl_r16(r16: u8, console: &mut Console, curr_ip: u16) {
 
     let r16_val: u16 = console.get_r16(r16);
     let base: u16 = console.get_r16(reg16::HL);
-    console.set_r16(reg16::HL, console.get_r16(reg16::HL) + r16_val);
+    console.set_r16(reg16::HL, console.get_r16(reg16::HL).wrapping_add(r16_val));
     console.clear_flag(flag::N);
     console.clear_or_set_flag(half_carry::add_16(base, r16_val), flag::H);
     console.clear_or_set_flag(carry::add_16(base, r16_val), flag::C);
@@ -57,7 +57,7 @@ fn inc_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("INC {}", reg8::reg_to_name(r8)), curr_ip);
 
     let base: u8 = console.get_r8(r8);
-    console.set_r8(r8, console.get_r8(r8) + 1);
+    console.set_r8(r8, console.get_r8(r8).wrapping_add(1));
     console.clear_or_set_flag((base + 1) == 0, flag::Z);
     console.clear_flag(flag::N);
     console.clear_or_set_flag(half_carry::add_8(base, 1), flag::H);
@@ -66,11 +66,11 @@ fn inc_r8(r8: u8, console: &mut Console, curr_ip: u16) {
 fn dec_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("DEC {}", reg8::reg_to_name(r8)), curr_ip);
 
-    console.set_r8(r8, console.get_r8(r8) - 1);
+    console.set_r8(r8, console.get_r8(r8).wrapping_sub(1));
     console.clear_or_set_flag(console.get_r8(r8) == 0, flag::Z);
     console.set_flag(flag::N);
     console.clear_or_set_flag(half_carry::sub_8(
-                            console.get_r8(r8) + 1, 1), flag::H);
+                            console.get_r8(r8).wrapping_add(1), 1), flag::H);
 }
 
 fn ld_r8_imm8(r8: u8, console: &mut Console, curr_ip: u16) {
@@ -112,8 +112,8 @@ fn daa(console: &mut Console, curr_ip: u16) {
     }
     console.clear_flag(flag::H);
 
-    if n_flag { console.set_r8(reg8::A, console.get_r8(reg8::A) - adjustment); }
-    else { console.set_r8(reg8::A, console.get_r8(reg8::A) + adjustment); }
+    if n_flag { console.set_r8(reg8::A, console.get_r8(reg8::A).wrapping_sub(adjustment)); }
+    else { console.set_r8(reg8::A, console.get_r8(reg8::A).wrapping_add(adjustment)); }
 }
 
 fn cpl(console: &mut Console, curr_ip: u16) {
