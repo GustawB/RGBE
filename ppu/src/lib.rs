@@ -99,11 +99,11 @@ impl Ppu {
         let ly: u8 = io_regs_guard[LY - IO_REGS_BASE];
 
         // Skipping Window logic for now
-        let curr_tile: u16 = (((pixel_idx + (scx / 8)) & 0x1F) + (32 * (((ly + scy) & 0xFF) / 8))).into();
+        let curr_tile: u16 = (((pixel_idx + (scx / 8)) & 0x1F).wrapping_add(32u8.wrapping_mul(((ly.wrapping_add(scy)) & 0xFF) / 8))).into();
         let tile_idx: u8 = vram_guard[(tile_base_addr + curr_tile) as usize - VRAM_BASE];
 
         let tdl: u8 = vram_guard[tile_idx as usize];
-        let tdh: u8 = vram_guard[tile_idx as usize + 1];
+        let tdh: u8 = vram_guard[tile_idx as usize];
 
         for i in 0..8 {
             let px: u8 = Ppu::get_color(tdl, tdh, i);
@@ -185,7 +185,7 @@ impl Ppu {
             {
                 let oam_guard = oam_mutex.lock().unwrap();
                 self.mode2(&oam_guard);
-                //self.mode3(&oam_guard);
+                self.mode3(&oam_guard);
             }
             self.oam = Some(oam_mutex);
             self.mode0();

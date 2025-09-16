@@ -439,14 +439,19 @@ impl<'a> Console<'a> {
                 }
             },
             (IO_REGS_BASE..HRAM_BASE) => {
-                if (PALETTES_BASE..PALETTES_END).contains(&addr) {
+                match self.palettes_lock.try_lock() {
+                    Ok(_) => self.io_regs.lock().unwrap()[addr - IO_REGS_BASE] = val,
+                    Err(_) => (),
+                }
+
+                /*if (PALETTES_BASE..PALETTES_END).contains(&addr) {
                     match self.palettes_lock.try_lock() {
                         Ok(_) => self.io_regs.lock().unwrap()[addr - IO_REGS_BASE] = val,
                         Err(_) => (),
                     }
                 } else {
                     self.io_regs.lock().unwrap()[addr - IO_REGS_BASE] = val;
-                }
+                }*/
             },
             (HRAM_BASE..IE) => self.hram[addr - HRAM_BASE] = val,
             IE => *self.ie.lock().unwrap() = val,
