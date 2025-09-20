@@ -21,7 +21,8 @@ use constants::{cond, flag, intr, reg16, reg16mem, reg16stk, reg8, ERAM_BASE, HR
 use ppu::Ppu;
 
 pub struct Console<'a> {
-    rom_bank_0: [u8; 0x4000],
+    addr_bus: [u8; 0x10000],
+    /*rom_bank_0: [u8; 0x4000],
     rom_bank_1: [u8; 0x4000],
     vram: Arc<Mutex<[u8; 0x2000]>>,
     eram: [u8; 0x2000],
@@ -29,7 +30,7 @@ pub struct Console<'a> {
     oam: Arc<Mutex<[u8; 0x100]>>,
     io_regs: Arc<Mutex<[u8; 0x80]>>,
     hram: [u8; 0x7F],
-    ie: Arc<Mutex<u8>>,
+    ie: Arc<Mutex<u8>>,*/
     ime: u8,
 
     palettes_lock: Mutex<()>,
@@ -65,44 +66,51 @@ static HEADER: [u8; HEADER_SIZE] = [
 
 impl<'a> Console<'a> {
     pub fn init(boot_rom: Vec<u8>) -> Result<Console<'a>, String> {
-        if boot_rom.len() > 0x100 {
-            Err(String::from("Boot rom too long"))
-        } else {
-            let mut tmp_rom_bank_0 = [0; 0x4000];
-            for i in 0..boot_rom.len() {
+        /*let mut tmp_rom_bank_0 = [0; 0x4000];
+        let mut tmp_rom_bank_1 = [0; 0x4000];
+        for i in 0..boot_rom.len() {
+            if i < 0x4000 {
                 tmp_rom_bank_0[i] = boot_rom[i];
+            } else {
+                tmp_rom_bank_1[i - 0x4000] = boot_rom[i];
             }
+        }*/
 
-            for i in 0..HEADER_SIZE {
-                tmp_rom_bank_0[0x100 + i] = HEADER[i];
-            }
+        /*for i in 0..HEADER_SIZE {
+            tmp_rom_bank_0[0x100 + i] = HEADER[i];
+        }*/
 
-            Ok(Console {
-                rom_bank_0: tmp_rom_bank_0,
-                rom_bank_1: [0; 0x4000],
-                vram: Arc::new(Mutex::new([0; 0x2000])),
-                eram: [0; 0x2000],
-                wram: [0; 0x1000],
-                oam: Arc::new(Mutex::new([0; 0x100])),
-                io_regs: Arc::new(Mutex::new([0; 0x80])),
-                hram: [0; 0x7F],
-                ie: Arc::new(Mutex::new(0)),
-                ime: 0,
-
-                palettes_lock: Mutex::new(()),
-
-                af: Register { value: 0 },
-                bc: Register { value: 0 },
-                de: Register { value: 0 },
-                hl: Register { value: 0 },
-                sp: Register { halves: [0xFF, 0xFE] },
-                ip: Register { value: 0 },
-                pending_ei: false,
-                phantom: PhantomData,
-                #[cfg(feature = "debugger")]
-                hookable: None,
-            })
+        let mut tmp_addr_bus = [0; 0x10000];
+        for i in 0..boot_rom.len() {
+            tmp_addr_bus[i] = boot_rom[i];
         }
+
+        Ok(Console {
+            addr_bus: tmp_addr_bus,
+            /*rom_bank_0: [0; 0x4000],
+            rom_bank_1: [0; 0x4000],
+            vram: Arc::new(Mutex::new([0; 0x2000])),
+            eram: [0; 0x2000],
+            wram: [0; 0x1000],
+            oam: Arc::new(Mutex::new([0; 0x100])),
+            io_regs: Arc::new(Mutex::new([0; 0x80])),
+            hram: [0; 0x7F],
+            ie: Arc::new(Mutex::new(0)),*/
+            ime: 0,
+
+            palettes_lock: Mutex::new(()),
+
+            af: Register { value: 0 },
+            bc: Register { value: 0 },
+            de: Register { value: 0 },
+            hl: Register { value: 0 },
+            sp: Register { halves: [0xFF, 0xFE] },
+            ip: Register { value: 0x100 },
+            pending_ei: false,
+            phantom: PhantomData,
+            #[cfg(feature = "debugger")]
+            hookable: None,
+        })
     }
 
     #[cfg(feature = "debugger")]
@@ -123,14 +131,6 @@ impl<'a> Console<'a> {
         ((b as u16) << 8) | a as u16 // Little endian garbage
     }
 
-    pub fn move_ip(&mut self, amount: u8) {
-        if (amount as i8) < 0 {
-            unsafe { self.ip.value -= (amount as i8).abs() as u16 };
-        } else {
-            unsafe { self.ip.value += amount as u16 };
-        }
-    }
-
     pub fn set_ip(&mut self, val: u16) {
         self.ip.value = val;
     }
@@ -148,7 +148,7 @@ impl<'a> Console<'a> {
     fn stk_pop8(&mut self) -> u8 {
         let sp: u16 = self.get_r16(reg16::SP);
         let res: u8 = self.get_mem(sp as usize);
-        self.set_r16(reg16::SP, sp + 1);
+        self.set_r16(reg16::SP, sp.wrapping_add(1));
         res
     }
 
@@ -216,29 +216,34 @@ impl<'a> Console<'a> {
     pub fn execute(&mut self) {
         self.call_hook("".to_owned(), std::u16::MAX);
 
-        let vram = self.vram.clone();
+        /*let vram = self.vram.clone();
         let oam = self.oam.clone();
         let io_regs = self.io_regs.clone();
         let handle = thread::spawn(move || {
             let mut ppu : Ppu = Ppu::new(vram, oam, io_regs);
             ppu.execute();
-        });
+        });*/
         
         loop {
             if self.ime == 1 {
                 for i in 0..5 {
                     let mask: u8 = 1 << i;
-                    if *self.ie.lock().unwrap() & mask == 1 &&
+                    if self.addr_bus[IE] & mask == 1 &&
+                        self.addr_bus[IF] & mask == 1 {
+                            self.handle_interrupt(mask);
+                        }
+                    /*if *self.ie.lock().unwrap() & mask == 1 &&
                         self.io_regs.lock().unwrap()[IF - IO_REGS_BASE] & mask == 1{
                         self.handle_interrupt(mask);
                         break;
-                    }
+                    }*/
+
                 }
             }
 
             self.step();
         }
-        handle.join().unwrap();
+        //handle.join().unwrap();
     }
 
     pub fn get_r8(&self, idx: u8) -> u8 {
@@ -379,6 +384,14 @@ impl<'a> Console<'a> {
     }
 
     pub fn get_mem(&self, addr: usize) -> u8 {
+        self.addr_bus[addr]
+    }
+
+    pub fn set_mem(&mut self, addr: usize, val: u8) {
+        self.addr_bus[addr] = val;
+    }
+
+    /*pub fn get_mem(&self, addr: usize) -> u8 {
         match addr {
             (ROM0_BASE..ROM1_BASE) => self.rom_bank_0[addr],
             (ROM1_BASE..VRAM_BASE) => self.rom_bank_1[addr - ROM1_BASE],
@@ -457,5 +470,5 @@ impl<'a> Console<'a> {
             IE => *self.ie.lock().unwrap() = val,
             _ => panic!("Invalid address")
         };
-    }
+    }*/
 }

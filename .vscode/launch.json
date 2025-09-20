@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["mgb.bin"],
+            "args": ["tests/cpu_instrs/individual/01-special.gb"],
             "cwd": "${workspaceFolder}"
         },
     ]

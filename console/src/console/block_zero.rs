@@ -1,6 +1,6 @@
 use constants::{cond, flag, reg16, reg16mem, reg8};
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{rotate_operand}}, types::{BitFlag, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{move_ip, rotate_operand}}, types::{BitFlag, CARRY, LEFT, NO_CARRY, RIGHT}, Console};
 
 fn ld_r16_imm16(r16: u8, console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
@@ -29,7 +29,7 @@ fn ld_imm16_sp(console: &mut Console, curr_ip: u16) {
 
     let sp_val: u16 = console.get_r16(reg16::SP);
     console.set_mem(imm16 as usize, (sp_val & 0xFF) as u8);
-    console.set_mem((imm16 + 1) as usize, (sp_val >> 8) as u8);
+    console.set_mem((imm16.wrapping_add(1)) as usize, (sp_val >> 8) as u8);
 }
 
 fn inc_r16(r16: u8, console: &mut Console, curr_ip: u16) {
@@ -57,8 +57,8 @@ fn inc_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("INC {}", reg8::reg_to_name(r8)), curr_ip);
 
     let base: u8 = console.get_r8(r8);
-    console.set_r8(r8, console.get_r8(r8).wrapping_add(1));
-    console.clear_or_set_flag((base + 1) == 0, flag::Z);
+    console.set_r8(r8, base.wrapping_add(1));
+    console.clear_or_set_flag(base.wrapping_add(1) == 0, flag::Z);
     console.clear_flag(flag::N);
     console.clear_or_set_flag(half_carry::add_8(base, 1), flag::H);
 }
@@ -138,22 +138,22 @@ fn ccf(console: &mut Console, curr_ip: u16) {
 }
 
 fn jr_imm8(console: &mut Console, curr_ip: u16) {
-    console.call_hook(format!("JR 0x{:04X}", console.get_ip()), curr_ip);
-
     let imm8: u8 = console.fetch_byte();
-    console.move_ip(imm8);
+    let ip: u16 = console.get_ip();
+    let new_ip: u16 = move_ip(ip, imm8);
+    console.call_hook(format!("JR 0x{:04X}", new_ip), curr_ip);
+    
+    console.set_ip(new_ip);
 }
 
 fn jr_cc_imm8(cc: u8, console: &mut Console, curr_ip: u16) {
-
-
     let imm8: u8 = console.fetch_byte();
-    console.move_ip(imm8);
-    console.call_hook(format!("JR {}, 0x{:04X}",
-            cond::get_cond_name(cc), console.get_ip()), curr_ip);
+    let ip: u16 = console.get_ip();
+    let new_ip: u16 = move_ip(ip, imm8);
+    console.call_hook(format!("JR {}, 0x{:04X}", cond::get_cond_name(cc), new_ip), curr_ip);
     
-    if !console.is_condition_met(cc) {
-        console.move_ip(std::u8::MAX - imm8 + 1);
+    if console.is_condition_met(cc) {
+        console.set_ip(new_ip);
     }
 }
 
@@ -168,7 +168,9 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
     let r8: u8 = (instr << 2) >> 5;
     let r16: u8 = (instr << 2) >> 6;
     let cc: u8 = (instr << 3) >> 6;
-    if instr & 0x0F == 1 {
+    if instr == 0 {
+        console.call_hook(format!("NOP"), curr_ip);
+    } else if instr & 0x0F == 1 {
         ld_r16_imm16(r16, console, curr_ip);
     } else if instr & 0x0F == 2 {
         ld_r16mem_a(r16, console, curr_ip);

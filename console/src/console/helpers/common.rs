@@ -5,7 +5,7 @@ use crate::console::{helpers::{bit_ops::{carry, half_carry}}, types::{BitFlag, A
 
 fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &mut Console, operand: u8, arg_type: usize, curr_ip: u16) {
     let arg: String = match arg_type {
-        reg8::MAX_REG8 => format!("{operand}"),
+        reg8::MAX_REG8 => format!("0x{:04X}", operand),
         _ => reg8::reg_to_name(arg_type as u8),
     };
 
@@ -20,7 +20,7 @@ fn log_arithm_a<OP: BitFlag, C: BitFlag>(console: &mut Console, operand: u8, arg
         SUB_VAL => {
             match C::VALUE {
                 CARRY_VAL => console.call_hook(format!("SBC A, {arg}"), curr_ip),
-                NO_CARRY_VAL => console.call_hook(format!("ADD A, {arg}"), curr_ip),
+                NO_CARRY_VAL => console.call_hook(format!("SUB A, {arg}"), curr_ip),
                 _ => panic!("Flag value out of range (possible values are: CARRY_VAL, NO_CARRY_VAL)"),
             }
         },
@@ -41,20 +41,20 @@ pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut 
     }
     let mut a_val: u8 = console.get_r8(reg8::A);
     match OP::VALUE {
-        ADD_VAL => a_val += operand,
-        SUB_VAL => a_val -= operand,
+        ADD_VAL => a_val = a_val.wrapping_add(operand),
+        SUB_VAL => a_val = a_val.wrapping_sub(operand),
         _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
     }
 
     console.clear_or_set_flag(OP::VALUE == 0, flag::N);
     match OP::VALUE {
         ADD_VAL => {
-            console.clear_or_set_flag(half_carry::add_8(a_val - operand, operand), flag::H);
-            console.clear_or_set_flag(carry::add_8(a_val - operand, operand), flag::C);
+            console.clear_or_set_flag(half_carry::add_8(a_val.wrapping_sub(operand), operand), flag::H);
+            console.clear_or_set_flag(carry::add_8(a_val.wrapping_sub(operand), operand), flag::C);
         },
         SUB_VAL => {
-            console.clear_or_set_flag(half_carry::sub_8(a_val + operand, operand), flag::H);
-            console.clear_or_set_flag(carry::sub_8(a_val + operand, operand), flag::C);
+            console.clear_or_set_flag(half_carry::sub_8(a_val.wrapping_add(operand), operand), flag::H);
+            console.clear_or_set_flag(carry::sub_8(a_val.wrapping_add(operand), operand), flag::C);
         }, 
         _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
     }
@@ -139,4 +139,9 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, c
 
     if r8 != reg8::EA { console.set_r8(r8, reg); }
     else { console.set_r8(reg8::A, reg); }
+}
+
+pub fn move_ip(ip: u16, amount: u8) -> u16 {
+    let offset = amount as i8;
+    (ip as i32 + offset as i32) as u16
 }

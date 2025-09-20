@@ -53,7 +53,7 @@ impl Ppu {
     
     fn draw_pixel(canvas: &mut Canvas<Window>, io_regs_guard: &MutexGuard<'_, [u8; 0x80]>, idx: u8, color: u8) {
         let ly: u8 = io_regs_guard[LY - IO_REGS_BASE];
-        let px: Rect = Rect::new((idx * 5).into(), ly.into(),5, 5);
+        let px: Rect = Rect::new((idx as u16 * 5).into(), ly.into(),5, 5);
 
         let color_palette: [u8; 4] = [0, 1, 2, 3];
         let rgb_val: u8 = 255 - color_palette[color as usize] * 85;
@@ -138,7 +138,7 @@ impl Ppu {
     }
 
     fn mode1() {
-        ::std::thread::sleep(Duration::from_millis(100));
+        ::std::thread::sleep(Duration::from_millis(1));
     }
 
     pub fn execute(&mut self) {
@@ -170,8 +170,9 @@ impl Ppu {
                 let pixel: Rect = Rect::new((tile_x*40) as i32+j*5, (tile_y*40) as i32+i*5, 5, 5);
 
                 let rgb_val: u8 = 255 - color_palette[color as usize] * 85;
-                self.canvas.set_draw_color(Color::RGB(rgb_val, rgb_val, rgb_val));
+                self.canvas.set_draw_color(Color::RGB(1, 0, 0));
                 self.canvas.draw_rect(pixel).unwrap();
+                self.canvas.set_draw_color(Color::RGB(rgb_val, rgb_val, rgb_val));
                 self.canvas.fill_rect(pixel).unwrap();
             }
         }

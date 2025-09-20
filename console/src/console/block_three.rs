@@ -23,6 +23,7 @@ fn cp_a_imm8(console: &mut Console, curr_ip: u16) {
     cp_a_operand(imm8, console);
 }
 
+// TODO: fix logging bug
 fn ret(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RET"), curr_ip);
     let ip: u16 = console.stk_pop16();
@@ -201,7 +202,7 @@ fn ei(console: &mut Console, curr_ip: u16) {
 }
 
 pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
-    let cc: u8 = (instr << 3) >> 5;
+    let cc: u8 = (instr << 3) >> 6;
     let tgt3: u8 = (instr << 2) >> 5;
     let r16stk: u8 = (instr << 2) >> 6;
 
@@ -221,6 +222,12 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
         logic_a_imm8::<OR>(console, curr_ip);
     } else if instr == 254 {
         cp_a_imm8(console, curr_ip);
+    } else if instr & 0xC7 == 0xC7 {
+        rst_tgt3(tgt3, console, curr_ip);
+    } else if instr & 0x0F == 1 {
+        pop_r16stk(r16stk, console, curr_ip);
+    } else if instr & 0x0F == 5 {
+        push_r16stk(r16stk, console, curr_ip);
     } else if instr & 0x18 == 192 {
         ret_cond(cc, console, curr_ip);
     } else if instr == 201 {
@@ -233,16 +240,10 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
         jp_imm16(console, curr_ip);
     } else if instr == 233 {
         jp_hl(console, curr_ip);
-    } else if instr & 0x18 == 196 {
-        call_cc_imm16(cc, console, curr_ip);
     } else if instr == 205 {
         call_imm16(console, curr_ip);
-    } else if instr & 0x38 == 199 {
-        rst_tgt3(tgt3, console, curr_ip);
-    } else if instr & 0x0F == 1 {
-        pop_r16stk(r16stk, console, curr_ip);
-    } else if instr & 0x0F == 5 {
-        push_r16stk(r16stk, console, curr_ip);
+    } else if instr & 0xC4 == 196 {
+        call_cc_imm16(cc, console, curr_ip);
     } else if instr == 226 {
         ldh_c_a(console, curr_ip);
     } else if instr == 224 {
@@ -266,7 +267,6 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
     } else if instr == 251 {
         ei(console, curr_ip);
     } else {
-        let _sex = instr & 0x00FF; 
         panic!("Invalid opcode in block three");
     }
 }

@@ -23,6 +23,9 @@ pub const WY: usize = 0xFF4B;
 
 pub const OAM_SIZE: usize = 0xA0;
 
+pub const SB: usize = 0xFF01;
+pub const SC: usize = 0xFF02;
+
 pub mod cond {
     pub const NZ: u8    = 0;
     pub const Z: u8     = 1;
