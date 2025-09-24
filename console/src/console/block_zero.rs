@@ -10,16 +10,16 @@ fn ld_r16_imm16(r16: u8, console: &mut Console, curr_ip: u16) {
 }
 
 fn ld_r16mem_a(r16: u8, console: &mut Console, curr_ip: u16) {
-    let r16mem_val: u16 = console.get_r16mem(r16);
     console.call_hook(format!("LD [{}], A", reg16mem::reg_to_name(r16)), curr_ip);
-
+    
+    let r16mem_val: u16 = console.get_r16mem(r16);
     console.set_mem(r16mem_val as usize, console.get_r8(reg8::A));
 }
 
 fn ld_a_r16mem(r16: u8, console: &mut Console, curr_ip: u16) {
-    let r16_val: u16 = console.get_r16mem(r16);
     console.call_hook(format!("LD A, [{}]", reg16mem::reg_to_name(r16)), curr_ip);
 
+    let r16_val: u16 = console.get_r16mem(r16);
     console.set_r8(reg8::A, console.get_mem(r16_val as usize));
 }
 
@@ -97,8 +97,9 @@ fn daa(console: &mut Console, curr_ip: u16) {
         if console.is_flag_set(flag::C) {
             adjustment += 0x60;
         }
-        console.clear_or_set_flag(a_val - adjustment == 0, flag::Z);
-        console.clear_or_set_flag(carry::sub_8(a_val, adjustment), flag::C);
+        console.clear_or_set_flag(a_val.wrapping_sub(adjustment) == 0, flag::Z);
+        // Ignoring carry because of // https://www.jnz.dk/z80/daa.html for the condition
+        console.set_r8(reg8::A, a_val.wrapping_sub(adjustment));
     }
     else {
         if console.is_flag_set(flag::H) || (a_val & 0xF) > 0x9 {
@@ -107,13 +108,12 @@ fn daa(console: &mut Console, curr_ip: u16) {
         if console.is_flag_set(flag::C) || a_val > 0x99 {
             adjustment += 0x60;
         }
-        console.clear_or_set_flag(a_val == 0, flag::Z);
-        console.clear_or_set_flag(carry::add_8(a_val - adjustment, adjustment), flag::C);
+        console.clear_or_set_flag(a_val.wrapping_add(adjustment) == 0, flag::Z);
+        // https://www.jnz.dk/z80/daa.html for the condition
+        console.clear_or_set_flag(adjustment >= 0x60, flag::C);
+        console.set_r8(reg8::A, a_val.wrapping_add(adjustment));
     }
     console.clear_flag(flag::H);
-
-    if n_flag { console.set_r8(reg8::A, console.get_r8(reg8::A).wrapping_sub(adjustment)); }
-    else { console.set_r8(reg8::A, console.get_r8(reg8::A).wrapping_add(adjustment)); }
 }
 
 fn cpl(console: &mut Console, curr_ip: u16) {

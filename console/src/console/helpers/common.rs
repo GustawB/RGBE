@@ -51,10 +51,12 @@ pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut 
         ADD_VAL => {
             console.clear_or_set_flag(half_carry::add_8(a_val.wrapping_sub(operand), operand), flag::H);
             console.clear_or_set_flag(carry::add_8(a_val.wrapping_sub(operand), operand), flag::C);
+            console.clear_flag(flag::N);
         },
         SUB_VAL => {
             console.clear_or_set_flag(half_carry::sub_8(a_val.wrapping_add(operand), operand), flag::H);
             console.clear_or_set_flag(carry::sub_8(a_val.wrapping_add(operand), operand), flag::C);
+            console.set_flag(flag::N);
         }, 
         _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
     }
@@ -86,7 +88,6 @@ pub fn cp_a_operand(operand: u8, console: &mut Console) {
 }
 
 pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, curr_ip: u16) {
-    console.clear_flags(&[flag::N, flag::H]);
     let curr_c: u8 = console.is_flag_set(flag::C) as u8;
 
     let mut reg: u8;
@@ -134,6 +135,7 @@ pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, c
         },
         _ => panic!("Invalid direction"),
     };
+    console.clear_flags(&[flag::N, flag::H]);
     console.clear_or_set_flag(reg == 0 && r8 != reg8::EA, flag::Z);
     console.clear_or_set_flag(c != 0, flag::C);
 

@@ -31,10 +31,11 @@ fn ret(console: &mut Console, curr_ip: u16) {
 }
 
 fn ret_cond(cc: u8, console: &mut Console, curr_ip: u16) {
-    console.call_hook(format!("RET cc"), curr_ip);
+    console.call_hook(format!("RET {}", cond::get_cond_name(cc)), curr_ip);
 
     if console.is_condition_met(cc) {
-        ret(console, curr_ip);
+        let ip: u16 = console.stk_pop16();
+        console.set_ip(ip);
     }
 }
 
@@ -100,7 +101,11 @@ fn pop_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("POP {}", reg16stk::reg_to_name(r16stk)), curr_ip);
 
     let popped: u16 = console.stk_pop16();
-    console.set_r16stk(r16stk, popped);
+    if r16stk == reg16stk::AF {
+        console.set_r16stk(r16stk, popped & 0xFFF0);
+    } else {
+        console.set_r16stk(r16stk, popped);
+    }
 }
 
 fn push_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
@@ -111,7 +116,7 @@ fn push_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
 }
 
 fn ldh_c_a(console: &mut Console, curr_ip: u16) {
-    console.call_hook(format!("LDH [C], A"), curr_ip);
+    console.call_hook(format!("LDH [0xFF00 + C], A"), curr_ip);
 
     let a_val: u8 = console.get_r8(reg8::A);
     let c_val: u8 = console.get_r8(reg8::C);
@@ -120,7 +125,7 @@ fn ldh_c_a(console: &mut Console, curr_ip: u16) {
 
 fn ldh_imm8_a(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
-    console.call_hook(format!("LDH [0x{:04X}], A", imm8), curr_ip);
+    console.call_hook(format!("LDH [0xFF00 + 0x{:04X}], A", imm8), curr_ip);
 
     let a_val: u8 = console.get_r8(reg8::A);
     console.set_mem((0xFF00 + imm8 as u16) as usize, a_val);
@@ -140,7 +145,7 @@ fn load_mem_into_a(addr: u16, console: &mut Console) {
 }
 
 fn ldh_a_c(console: &mut Console, curr_ip: u16) {
-    console.call_hook(format!("LDH A, [C]"), curr_ip);
+    console.call_hook(format!("LDH A, [0xFF00 + C]"), curr_ip);
 
     let c_val: u8 = console.get_r8(reg8::C);
     load_mem_into_a(0xFF00 + c_val as u16, console);
@@ -148,7 +153,7 @@ fn ldh_a_c(console: &mut Console, curr_ip: u16) {
 
 fn ldh_a_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
-    console.call_hook(format!("LDH A, [0x{:04X}]", imm8), curr_ip);
+    console.call_hook(format!("LDH A, [0xFF00 + 0x{:04X}]", imm8), curr_ip);
 
     load_mem_into_a(0xFF00 + imm8 as u16, console);
 }
@@ -228,13 +233,13 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
         pop_r16stk(r16stk, console, curr_ip);
     } else if instr & 0x0F == 5 {
         push_r16stk(r16stk, console, curr_ip);
-    } else if instr & 0x18 == 192 {
-        ret_cond(cc, console, curr_ip);
     } else if instr == 201 {
         ret(console, curr_ip);
+    } else if instr & 0xE7 == 0xC0 {
+        ret_cond(cc, console, curr_ip);
     } else if instr == 217 {
         reti(console, curr_ip);
-    } else if instr & 0x18 == 194 {
+    } else if instr & 0xE7 == 0xC2 {
         jp_cc_imm16(cc, console, curr_ip);
     } else if instr == 195 {
         jp_imm16(console, curr_ip);
@@ -242,7 +247,7 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
         jp_hl(console, curr_ip);
     } else if instr == 205 {
         call_imm16(console, curr_ip);
-    } else if instr & 0xC4 == 196 {
+    } else if instr & 0xE7 == 0xC4 {
         call_cc_imm16(cc, console, curr_ip);
     } else if instr == 226 {
         ldh_c_a(console, curr_ip);

@@ -48,7 +48,7 @@ fn srl_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     let c: u8 = r8_val & 0x1;
     r8_val >>= 1;
     console.clear_or_set_flag(r8_val == 0, flag::Z);
-    console.clear_or_set_flag(c != 0, flag::Z);
+    console.clear_or_set_flag(c != 0, flag::C);
     console.set_r8(r8, r8_val);
 }
 

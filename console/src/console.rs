@@ -7,7 +7,9 @@ mod block_one;
 mod block_two;
 mod block_three;
 
-use std::marker::PhantomData;
+use std::io::Write;
+use std::net::TcpStream;
+use std::{marker::PhantomData, net::TcpListener};
 use std::thread;
 
 pub use crate::console::helpers::common::debug_addr;
@@ -17,7 +19,7 @@ use crate::types::Hookable;
 
 use std::sync::{Arc, Mutex};
 
-use constants::{cond, flag, intr, reg16, reg16mem, reg16stk, reg8, ERAM_BASE, HRAM_BASE, IE, IF, IO_REGS_BASE, OAM_BASE, PALETTES_BASE, PALETTES_END, PROHIBITED_BASE, ROM0_BASE, ROM1_BASE, UNUSED_RAM_BASE, VRAM_BASE, WRAM_BASE};
+use constants::{cond, flag, intr, reg16, reg16mem, reg16stk, reg8, ERAM_BASE, HRAM_BASE, IE, IF, IO_REGS_BASE, LY, OAM_BASE, PALETTES_BASE, PALETTES_END, PROHIBITED_BASE, ROM0_BASE, ROM1_BASE, SB, SC, UNUSED_RAM_BASE, VRAM_BASE, WRAM_BASE};
 use ppu::Ppu;
 
 pub struct Console<'a> {
@@ -100,12 +102,12 @@ impl<'a> Console<'a> {
 
             palettes_lock: Mutex::new(()),
 
-            af: Register { value: 0 },
-            bc: Register { value: 0 },
-            de: Register { value: 0 },
-            hl: Register { value: 0 },
-            sp: Register { halves: [0xFF, 0xFE] },
-            ip: Register { value: 0x100 },
+            af: Register { halves: [0xB0, 0x01] },
+            bc: Register { halves: [0x13, 0x00] },
+            de: Register { halves: [0xD8, 0x00] },
+            hl: Register { halves: [0x4D, 0x01] },
+            sp: Register { value: 0xFFFE },
+            ip: Register { value: 0x0100 },
             pending_ei: false,
             phantom: PhantomData,
             #[cfg(feature = "debugger")]
@@ -214,8 +216,6 @@ impl<'a> Console<'a> {
 
     // Entry point of the console.
     pub fn execute(&mut self) {
-        self.call_hook("".to_owned(), std::u16::MAX);
-
         /*let vram = self.vram.clone();
         let oam = self.oam.clone();
         let io_regs = self.io_regs.clone();
@@ -223,7 +223,8 @@ impl<'a> Console<'a> {
             let mut ppu : Ppu = Ppu::new(vram, oam, io_regs);
             ppu.execute();
         });*/
-        
+
+        self.call_hook("".to_owned(), std::u16::MAX);
         loop {
             if self.ime == 1 {
                 for i in 0..5 {
@@ -278,7 +279,7 @@ impl<'a> Console<'a> {
         }
     }
 
-    fn get_r16(&self, idx: u8) -> u16 {
+    pub fn get_r16(&self, idx: u8) -> u16 {
         unsafe {
             match idx {
                 reg16::BC => self.bc.value,
@@ -333,7 +334,7 @@ impl<'a> Console<'a> {
                 },
                 reg16mem::HLD => {
                     self.hl.value -= 1;
-                    self.hl.value
+                    self.hl.value + 1
                 },
                 _ => panic!("Index out of range"),
             }
@@ -363,6 +364,9 @@ impl<'a> Console<'a> {
             self.set_flag(*flag);
         }
     }
+    pub fn get_flags(&self) -> u8 {
+        unsafe { self.af.halves[0] }
+    }
 
     pub fn clear_or_set_flag(&mut self, should_set: bool, flag: u8) {
         if should_set {
@@ -384,7 +388,11 @@ impl<'a> Console<'a> {
     }
 
     pub fn get_mem(&self, addr: usize) -> u8 {
-        self.addr_bus[addr]
+        if addr == LY {
+            0x90 // for gameboy doctor debugging
+        } else {
+            self.addr_bus[addr]
+        }
     }
 
     pub fn set_mem(&mut self, addr: usize, val: u8) {

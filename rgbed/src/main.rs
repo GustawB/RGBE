@@ -1,9 +1,10 @@
 use core::panic;
-use std::{env, i64};
-use std::fs::read;
+use std::{env, fs, i64};
+use std::fs::{read, File, OpenOptions};
 use std::collections::HashMap;
 use console::debug_addr;
 use console::types::Hookable;
+use constants::reg16::{self, SP};
 use constants::{flag, reg8};
 use env_logger::Env;
 use text_io::read;
@@ -126,7 +127,20 @@ impl Debugger {
 
 impl Hookable for Debugger {
     fn hook(&mut self, console: &Console, log: String, addr: u16) {
+        let mut file = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open("logs.txt")
+                .unwrap();
+            
+            
         if addr != std::u16::MAX {
+            let msg = format!("A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}\n",
+                            console.get_r8(reg8::A), console.get_flags(), console.get_r8(reg8::B), console.get_r8(reg8::C),
+                            console.get_r8(reg8::D), console.get_r8(reg8::E), console.get_r8(reg8::H), console.get_r8(reg8::L),
+                            console.get_r16(reg16::SP), addr, console.get_mem(addr.into()), console.get_mem((addr + 1).into()),
+                            console.get_mem((addr + 2).into()), console.get_mem((addr + 3).into()));
+            file.write_all(msg.as_bytes()).unwrap();
             debug_addr(addr, log);
             if self.verbose {
                 Debugger::dump_regs(console);
