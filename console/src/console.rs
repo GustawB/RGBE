@@ -204,7 +204,9 @@ impl<'a> Console<'a> {
     fn handle_interrupt(&mut self, mask: u8) {
         self.stk_push16(self.get_ip());
         self.set_ip(intr::get_jump_vector(mask));
-        self.call_hook(intr::intr_to_name(mask), self.get_ip());
+        self.set_ime(0);
+        self.addr_bus[IF] = self.addr_bus[IF] & (!mask);
+        //self.call_hook(intr::intr_to_name(mask), self.get_ip());
     }
 
     pub fn set_ime(&mut self, val: u8) {

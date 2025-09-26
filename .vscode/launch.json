@@ -19,7 +19,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["tests/cpu_instrs/individual/01-special.gb"],
+            "args": ["tests/cpu_instrs/individual/09-op r,r.gb"],
             "cwd": "${workspaceFolder}"
         },
     ]

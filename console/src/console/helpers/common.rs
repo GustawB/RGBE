@@ -35,27 +35,28 @@ pub fn debug_addr(addr: u16, expr: String) {
 
 pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut Console, arg_type: u8, curr_ip: u16) {
     log_arithm_a::<OP, C>(console, operand, arg_type as usize, curr_ip);
+    let mut carry: u8 = 0;
     if C::VALUE == CARRY_VAL && console.is_flag_set(flag::C) {
-        // If op with carry, like ADC, and Carry is set, increment the operand.
-        operand += 1;
+        carry = 1;
     }
     let mut a_val: u8 = console.get_r8(reg8::A);
+    let base_a_val: u8 = a_val;
     match OP::VALUE {
-        ADD_VAL => a_val = a_val.wrapping_add(operand),
-        SUB_VAL => a_val = a_val.wrapping_sub(operand),
+        ADD_VAL => a_val = a_val.wrapping_add(operand).wrapping_add(carry),
+        SUB_VAL => a_val = a_val.wrapping_sub(operand).wrapping_sub(carry),
         _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
     }
 
     console.clear_or_set_flag(OP::VALUE == 0, flag::N);
     match OP::VALUE {
         ADD_VAL => {
-            console.clear_or_set_flag(half_carry::add_8(a_val.wrapping_sub(operand), operand), flag::H);
-            console.clear_or_set_flag(carry::add_8(a_val.wrapping_sub(operand), operand), flag::C);
+            console.clear_or_set_flag(half_carry::add_8(base_a_val, operand, carry), flag::H);
+            console.clear_or_set_flag(carry::add_8(base_a_val, operand, carry), flag::C);
             console.clear_flag(flag::N);
         },
         SUB_VAL => {
-            console.clear_or_set_flag(half_carry::sub_8(a_val.wrapping_add(operand), operand), flag::H);
-            console.clear_or_set_flag(carry::sub_8(a_val.wrapping_add(operand), operand), flag::C);
+            console.clear_or_set_flag(half_carry::sub_8(base_a_val, operand, carry), flag::H);
+            console.clear_or_set_flag(carry::sub_8(base_a_val, operand, carry), flag::C);
             console.set_flag(flag::N);
         }, 
         _ => panic!("Flag value out of range (possible values are: ADD_VAL, SUB_VAL)"),
@@ -66,7 +67,7 @@ pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut 
 
 pub fn logic_a_operand<OP: BitFlag>(operand: u8, console: &mut Console) {
     let mut a_val: u8 = console.get_r8(reg8::A);
-     match OP::VALUE {
+    match OP::VALUE {
         AND_VAL => a_val &= operand,
         XOR_VAL => a_val ^= operand,
         OR_VAL => a_val |= operand,
@@ -83,8 +84,8 @@ pub fn cp_a_operand(operand: u8, console: &mut Console) {
     let a_val: u8 = console.get_r8(reg8::A);
     console.clear_or_set_flag(a_val == operand, flag::Z);
     console.set_flag( flag::N);
-    console.clear_or_set_flag(half_carry::sub_8(a_val, operand), flag::H);
-    console.clear_or_set_flag(carry::sub_8(a_val, operand), flag::C);
+    console.clear_or_set_flag(half_carry::sub_8(a_val, operand, 0), flag::H);
+    console.clear_or_set_flag(carry::sub_8(a_val, operand, 0), flag::C);
 }
 
 pub fn rotate_operand<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, curr_ip: u16) {

@@ -2,7 +2,7 @@ use core::panic;
 
 use constants::{cond, flag, reg16, reg16stk, reg8};
 
-use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand}}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
+use crate::console::{helpers::{bit_ops::{carry, half_carry}, common::{arithm_a_operand, cp_a_operand, logic_a_operand, move_ip}}, types::{BitFlag, ADD, AND, CARRY, NO_CARRY, OR, SUB, XOR}, Console};
 
 fn arithm_a_imm8<OP: BitFlag, C: BitFlag>(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
@@ -23,7 +23,6 @@ fn cp_a_imm8(console: &mut Console, curr_ip: u16) {
     cp_a_operand(imm8, console);
 }
 
-// TODO: fix logging bug
 fn ret(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RET"), curr_ip);
     let ip: u16 = console.stk_pop16();
@@ -42,7 +41,8 @@ fn ret_cond(cc: u8, console: &mut Console, curr_ip: u16) {
 fn reti(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RETI"), curr_ip);
 
-    ret(console, curr_ip);
+    let ip: u16 = console.stk_pop16();
+    console.set_ip(ip);
     console.set_ime(1);
 }
 
@@ -94,7 +94,7 @@ fn call_cc_imm16(cc: u8, console: &mut Console, curr_ip: u16) {
 fn rst_tgt3(tgt3: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RST {tgt3}"), curr_ip);
     setup_call(console);
-    console.set_ip(tgt3 as u16);
+    console.set_ip((tgt3 as u16) << 3);
 }
 
 fn pop_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
@@ -168,10 +168,10 @@ fn ld_a_imm16(console: &mut Console, curr_ip: u16) {
 fn add_sp_imm8_logless(console: &mut Console, imm8: u8) -> u16 {
     console.clear_flags(&[flag::Z, flag::N]);
     let sp_val: u16 = console.get_r16(reg16::SP);
-    console.clear_or_set_flag(half_carry::add_16(sp_val, imm8 as u16), flag::H);
-    console.clear_or_set_flag(carry::add_16(sp_val, imm8 as u16), flag::C);
-    console.set_r16(reg16::SP, sp_val + imm8 as u16);
-    sp_val + imm8 as u16
+    console.clear_or_set_flag(half_carry::add_8((sp_val & 0xFF) as u8, imm8, 0), flag::H);
+    console.clear_or_set_flag(carry::add_8((sp_val & 0xFF) as u8, imm8, 0), flag::C);
+    console.set_r16(reg16::SP, move_ip(sp_val, imm8));
+    move_ip(sp_val, imm8)
 }
 
 fn add_sp_imm8(console: &mut Console, curr_ip: u16) {
@@ -185,8 +185,12 @@ fn ld_hl_sp_imm8(console: &mut Console, curr_ip: u16) {
     let imm8: u8 = console.fetch_byte();
     console.call_hook(format!("LD HL, SP+0x{:04X}", imm8), curr_ip);
 
-    let tmp: u16 = add_sp_imm8_logless(console, imm8);
-    console.set_r16(reg16::HL, tmp);
+    console.clear_flags(&[flag::Z, flag::N]);
+    let sp_val: u16 = console.get_r16(reg16::SP);
+    console.clear_or_set_flag(half_carry::add_8((sp_val & 0xFF) as u8, imm8, 0), flag::H);
+    console.clear_or_set_flag(carry::add_8((sp_val & 0xFF) as u8, imm8, 0), flag::C);
+
+    console.set_r16(reg16::HL, move_ip(sp_val, imm8));
 }
 
 fn ld_sp_hl(console: &mut Console, curr_ip: u16) {

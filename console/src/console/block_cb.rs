@@ -8,23 +8,24 @@ fn rotate<DIR: BitFlag, C: BitFlag>(r8: u8, console: &mut Console, curr_ip: u16)
     rotate_operand::<DIR, C>(r8, console, curr_ip);
 }
 
-fn shift<DIR: BitFlag>(r8: u8, console: &mut Console, _curr_ip: u16) {
-    // TODO: add logs
-    console.clear_flags(&[flag::N, flag::H]);
+fn shift<DIR: BitFlag>(r8: u8, console: &mut Console, curr_ip: u16) {
     let mut r8_val: u8 = console.get_r8(r8);
     let c: u8;
     match DIR::VALUE {
         0 => {
+            console.call_hook(format!("SLA {}", reg8::reg_to_name(r8)), curr_ip);
             c = r8_val >> 7;
             r8_val <<= 1;
         },
         1 => {
+            console.call_hook(format!("SRA {}", reg8::reg_to_name(r8)), curr_ip);
             c = r8_val & 0x1;
-            r8_val >>= 1;
+            r8_val = (r8_val >> 1) | (r8_val & 0x80);
         }
         _ => panic!("Invalid direction"),
     }
 
+    console.clear_flags(&[flag::N, flag::H]);
     console.clear_or_set_flag(r8_val == 0, flag::Z);
     console.clear_or_set_flag(c != 0, flag::C);
     console.set_r8(r8, r8_val);

@@ -60,7 +60,7 @@ fn inc_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     console.set_r8(r8, base.wrapping_add(1));
     console.clear_or_set_flag(base.wrapping_add(1) == 0, flag::Z);
     console.clear_flag(flag::N);
-    console.clear_or_set_flag(half_carry::add_8(base, 1), flag::H);
+    console.clear_or_set_flag(half_carry::add_8(base, 1, 0), flag::H);
 }
 
 fn dec_r8(r8: u8, console: &mut Console, curr_ip: u16) {
@@ -70,7 +70,7 @@ fn dec_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     console.clear_or_set_flag(console.get_r8(r8) == 0, flag::Z);
     console.set_flag(flag::N);
     console.clear_or_set_flag(half_carry::sub_8(
-                            console.get_r8(r8).wrapping_add(1), 1), flag::H);
+                            console.get_r8(r8).wrapping_add(1), 1, 0), flag::H);
 }
 
 fn ld_r8_imm8(r8: u8, console: &mut Console, curr_ip: u16) {
@@ -202,9 +202,9 @@ pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {
         daa(console, curr_ip);
     } else if instr == 47 {
         cpl(console, curr_ip);
-    } else if instr == 55 {
+    } else if instr == 0x37 {
         scf(console, curr_ip);
-    } else if instr == 61 {
+    } else if instr == 0x3F {
         ccf(console, curr_ip);
     } else if instr == 24 {
         jr_imm8(console, curr_ip);
