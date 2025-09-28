@@ -1,3 +1,5 @@
+use paste::paste;
+
 use crate::Console;
 
 pub union Register {
@@ -11,96 +13,32 @@ pub trait BitFlag {
     fn to_string() -> String;
 }
 
-pub const ADD_VAL: u8 = 0;
-pub struct ADD;
-impl BitFlag for ADD {
-    const VALUE: u8 = ADD_VAL;
 
-    fn to_string() -> String {
-        "ADD".to_string()
-    }
+macro_rules! def_bitflag_type {
+    ($name:ident, $val:literal) => {
+        paste! {
+            pub const [<$name _VAL>]: u8 = $val;
+            #[allow(non_camel_case_types)]
+            pub struct $name;
+            impl BitFlag for $name {
+                const VALUE: u8 = [<$name _VAL>];
+                fn to_string() -> String {
+                    stringify!($name).to_string()
+                }
+            }
+        }
+    };
 }
 
-pub const SUB_VAL: u8 = 1;
-pub struct SUB;
-impl BitFlag for SUB {
-    const VALUE: u8 = SUB_VAL;
-
-    fn to_string() -> String {
-        "SUB".to_string()
-    }
-}
-
-pub const AND_VAL: u8 = 2;
-pub struct AND;
-impl BitFlag for AND {
-    const VALUE: u8 = AND_VAL;
-
-    fn to_string() -> String {
-        "AND".to_string()
-    }
-}
-
-pub const XOR_VAL: u8 = 3;
-pub struct XOR;
-impl BitFlag for XOR {
-    const VALUE: u8 = XOR_VAL;
-
-    fn to_string() -> String {
-        "XOR".to_string()
-    }
-}
-
-pub const OR_VAL: u8 = 4;
-pub struct OR;
-impl BitFlag for OR {
-    const VALUE: u8 = OR_VAL;
-
-    fn to_string() -> String {
-        "OR".to_string()
-    }
-}
-
-pub const CARRY_VAL: u8 = 0;
-pub struct CARRY;
-impl BitFlag for CARRY {
-    const VALUE: u8 = CARRY_VAL;
-
-    fn to_string() -> String {
-        "CARRY".to_string()
-    }
-}
-
-pub const NO_CARRY_VAL: u8 = 1;
-#[allow(non_camel_case_types)]
-pub struct NO_CARRY;
-impl BitFlag for NO_CARRY {
-    const VALUE: u8 = NO_CARRY_VAL;
-
-    fn to_string() -> String {
-        "NO_CARRY".to_string()
-    }
-}
-
-pub const LEFT_VAL: u8 = 0;
-pub struct LEFT;
-impl BitFlag for LEFT {
-    const VALUE: u8 = LEFT_VAL;
-
-    fn to_string() -> String {
-        "LEFT".to_string()
-    }
-}
-
-pub const RIGHT_VAL: u8 = 1;
-pub struct RIGHT;
-impl BitFlag for RIGHT {
-    const VALUE: u8 = RIGHT_VAL;
-
-    fn to_string() -> String {
-        "RIGHT".to_string()
-    }
-}
+def_bitflag_type!(ADD, 0);
+def_bitflag_type!(SUB, 1);
+def_bitflag_type!(AND, 2);
+def_bitflag_type!(XOR, 3);
+def_bitflag_type!(OR, 4);
+def_bitflag_type!(CARRY, 0);
+def_bitflag_type!(NO_CARRY, 1);
+def_bitflag_type!(LEFT, 0);
+def_bitflag_type!(RIGHT, 1);
 
 pub trait Hookable {
     fn hook(&mut self, console: &Console, log: String, addr: u16);
