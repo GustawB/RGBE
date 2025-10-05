@@ -33,7 +33,7 @@ pub fn debug_addr(addr: u16, expr: String) {
     debug!("0x{:04X}: {expr}", addr);
 }
 
-pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(mut operand: u8, console: &mut Console, arg_type: u8, curr_ip: u16) {
+pub fn arithm_a_operand<OP: BitFlag, C: BitFlag>(operand: u8, console: &mut Console, arg_type: u8, curr_ip: u16) {
     log_arithm_a::<OP, C>(console, operand, arg_type as usize, curr_ip);
     let mut carry: u8 = 0;
     if C::VALUE == CARRY_VAL && console.is_flag_set(flag::C) {

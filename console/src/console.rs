@@ -19,6 +19,7 @@ use crate::types::Hookable;
 
 use std::sync::{Arc, Mutex};
 
+use clock::Clock;
 use constants::{cond, flag, intr, reg16, reg16mem, reg16stk, reg8, ERAM_BASE, HRAM_BASE, IE, IF, IO_REGS_BASE, LY, OAM_BASE, PALETTES_BASE, PALETTES_END, PROHIBITED_BASE, ROM0_BASE, ROM1_BASE, SB, SC, UNUSED_RAM_BASE, VRAM_BASE, WRAM_BASE};
 use ppu::Ppu;
 
@@ -35,7 +36,7 @@ pub struct Console<'a> {
     ie: Arc<Mutex<u8>>,*/
     ime: u8,
 
-    palettes_lock: Mutex<()>,
+    clock: Arc<Clock>,
 
     af: Register,
     bc: Register,
@@ -100,7 +101,7 @@ impl<'a> Console<'a> {
             ie: Arc::new(Mutex::new(0)),*/
             ime: 0,
 
-            palettes_lock: Mutex::new(()),
+            clock: Arc::new(Clock::new()),
 
             af: Register { halves: [0xB0, 0x01] },
             bc: Register { halves: [0x13, 0x00] },
@@ -121,6 +122,7 @@ impl<'a> Console<'a> {
     }
 
     pub fn fetch_byte(&mut self) -> u8 {
+        self.clock.mcycle();
         let res: u8 = unsafe { self.get_mem(self.ip.value as usize) };
         unsafe { self.ip.value += 1 };
         res
