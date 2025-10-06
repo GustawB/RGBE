@@ -13,14 +13,16 @@ fn ld_r16mem_a(r16: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("LD [{}], A", reg16mem::reg_to_name(r16)), curr_ip);
     
     let r16mem_val: u16 = console.get_r16mem(r16);
-    console.set_mem(r16mem_val as usize, console.get_r8(reg8::A));
+    let a_val: u8 =  console.get_r8(reg8::A);
+    console.set_mem(r16mem_val as usize, a_val);
 }
 
 fn ld_a_r16mem(r16: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("LD A, [{}]", reg16mem::reg_to_name(r16)), curr_ip);
 
     let r16_val: u16 = console.get_r16mem(r16);
-    console.set_r8(reg8::A, console.get_mem(r16_val as usize));
+    let mem_val: u8 = console.get_mem(r16_val as usize);
+    console.set_r8(reg8::A, mem_val);
 }
 
 fn ld_imm16_sp(console: &mut Console, curr_ip: u16) {
@@ -66,11 +68,12 @@ fn inc_r8(r8: u8, console: &mut Console, curr_ip: u16) {
 fn dec_r8(r8: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("DEC {}", reg8::reg_to_name(r8)), curr_ip);
 
-    console.set_r8(r8, console.get_r8(r8).wrapping_sub(1));
-    console.clear_or_set_flag(console.get_r8(r8) == 0, flag::Z);
+    let r8_val: u8 = console.get_r8(r8).wrapping_sub(1);
+    console.set_r8(r8, r8_val);
+    console.clear_or_set_flag(r8_val == 0, flag::Z);
     console.set_flag(flag::N);
     console.clear_or_set_flag(half_carry::sub_8(
-                            console.get_r8(r8).wrapping_add(1), 1, 0), flag::H);
+                            r8_val.wrapping_add(1), 1, 0), flag::H);
 }
 
 fn ld_r8_imm8(r8: u8, console: &mut Console, curr_ip: u16) {
@@ -120,7 +123,8 @@ fn cpl(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("CPL"), curr_ip);
 
     console.set_flags(&[flag::N, flag::H]);
-    console.set_r8(reg8::A, !console.get_r8(reg8::A));
+    let a_val: u8 = console.get_r8(reg8::A);
+    console.set_r8(reg8::A, !a_val);
 }
 
 fn scf(console: &mut Console, curr_ip: u16) {

@@ -64,12 +64,14 @@ fn bit_b3_r8(b3: u8, r8: u8, console: &mut Console, curr_ip: u16) {
 
 fn res_b3_r8(b3: u8, r8: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RES {b3}, {}", reg8::reg_to_name(r8)), curr_ip);
-    console.set_r8(r8, console.get_r8(r8) & !(0x1 << b3));
+    let r8_val:u8 = console.get_r8(r8);
+    console.set_r8(r8, r8_val & !(0x1 << b3));
 }
 
 fn set_b3_r8(b3: u8, r8: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("SET {b3}, {}", reg8::reg_to_name(r8)), curr_ip);
-    console.set_r8(r8, console.get_r8(r8) | 0x1 << b3);
+    let r8_val:u8 = console.get_r8(r8);
+    console.set_r8(r8, r8_val | 0x1 << b3);
 }
 
 pub fn dispatch(console: &mut Console, instr: u8, curr_ip: u16) -> () {

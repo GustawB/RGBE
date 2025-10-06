@@ -36,7 +36,7 @@ pub struct Console<'a> {
     ie: Arc<Mutex<u8>>,*/
     ime: u8,
 
-    clock: Arc<Clock>,
+    clock: Arc<Mutex<Clock>>,
 
     af: Register,
     bc: Register,
@@ -101,7 +101,7 @@ impl<'a> Console<'a> {
             ie: Arc::new(Mutex::new(0)),*/
             ime: 0,
 
-            clock: Arc::new(Clock::new()),
+            clock: Arc::new(Mutex::new(Clock::new())),
 
             af: Register { halves: [0xB0, 0x01] },
             bc: Register { halves: [0x13, 0x00] },
@@ -121,8 +121,13 @@ impl<'a> Console<'a> {
         self.hookable = Some(h);
     }
 
+    fn mcycle(&mut self) {
+        for _ in 0..4 {
+            self.clock.lock().unwrap().increment();
+        }
+    }
+
     pub fn fetch_byte(&mut self) -> u8 {
-        self.clock.mcycle();
         let res: u8 = unsafe { self.get_mem(self.ip.value as usize) };
         unsafe { self.ip.value += 1 };
         res
@@ -251,7 +256,7 @@ impl<'a> Console<'a> {
         //handle.join().unwrap();
     }
 
-    pub fn get_r8(&self, idx: u8) -> u8 {
+    pub fn get_r8(&mut self, idx: u8) -> u8 {
         unsafe {
             match idx {
                 reg8::B => self.bc.halves[1],
@@ -391,15 +396,17 @@ impl<'a> Console<'a> {
         }
     }
 
-    pub fn get_mem(&self, addr: usize) -> u8 {
+    pub fn get_mem(&mut self, addr: usize) -> u8 {
         if addr == LY {
             0x90 // for gameboy doctor debugging
         } else {
+            self.mcycle();
             self.addr_bus[addr]
         }
     }
 
     pub fn set_mem(&mut self, addr: usize, val: u8) {
+        self.mcycle();
         self.addr_bus[addr] = val;
     }
 
