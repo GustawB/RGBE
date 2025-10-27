@@ -26,15 +26,23 @@ fn cp_a_imm8(console: &mut Console, curr_ip: u16) {
 fn ret(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RET"), curr_ip);
     let ip: u16 = console.stk_pop16();
+
     console.set_ip(ip);
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 127
+    console.mcycle();
 }
 
 fn ret_cond(cc: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RET {}", cond::get_cond_name(cc)), curr_ip);
 
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 127
+    console.mcycle();
+
     if console.is_condition_met(cc) {
         let ip: u16 = console.stk_pop16();
         console.set_ip(ip);
+        // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 127
+        console.mcycle();
     }
 }
 
@@ -44,6 +52,9 @@ fn reti(console: &mut Console, curr_ip: u16) {
     let ip: u16 = console.stk_pop16();
     console.set_ip(ip);
     console.set_ime(1);
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 116
+    console.mcycle();
 }
 
 fn jp_cc_imm16(cc: u8, console: &mut Console, curr_ip: u16) {
@@ -52,6 +63,9 @@ fn jp_cc_imm16(cc: u8, console: &mut Console, curr_ip: u16) {
 
     if console.is_condition_met(cc) {
         console.set_ip(imm16);
+
+        // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 118
+        console.mcycle();
     }
 }
 
@@ -59,6 +73,9 @@ fn jp_imm16(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     console.call_hook(format!("JP 0x{:04X}", imm16), curr_ip);
     console.set_ip(imm16);
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 116
+    console.mcycle();
 }
 
 fn jp_hl(console: &mut Console, curr_ip: u16) {
@@ -77,6 +94,8 @@ fn call_imm16(console: &mut Console, curr_ip: u16) {
     let imm16: u16 = console.fetch_two_bytes();
     console.call_hook(format!("CALL 0x{:04X}", imm16), curr_ip);
 
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 123
+    console.mcycle();
     setup_call(console);
     console.set_ip(imm16);
 }
@@ -86,6 +105,8 @@ fn call_cc_imm16(cc: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("CALL {}, 0x{:04X}", cond::get_cond_name(cc), imm16), curr_ip);
 
     if console.is_condition_met(cc) {
+        // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 124
+        console.mcycle();
         setup_call(console);
         console.set_ip(imm16);
     }
@@ -93,6 +114,8 @@ fn call_cc_imm16(cc: u8, console: &mut Console, curr_ip: u16) {
 
 fn rst_tgt3(tgt3: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("RST {tgt3}"), curr_ip);
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 129
+    console.mcycle();
     setup_call(console);
     console.set_ip((tgt3 as u16) << 3);
 }
@@ -111,6 +134,8 @@ fn pop_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
 fn push_r16stk(r16stk: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("PUSH {}", reg16stk::reg_to_name(r16stk)), curr_ip);
 
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 42
+    console.mcycle();
     let val: u16 = console.get_r16stk(r16stk);
     console.stk_push16(val);
 }
@@ -171,6 +196,9 @@ fn add_sp_imm8_logless(console: &mut Console, imm8: u8) -> u16 {
     console.clear_or_set_flag(half_carry::add_8((sp_val & 0xFF) as u8, imm8, 0), flag::H);
     console.clear_or_set_flag(carry::add_8((sp_val & 0xFF) as u8, imm8, 0), flag::C);
     console.set_r16(reg16::SP, move_ip(sp_val, imm8));
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 80
+    console.mcycle();
     move_ip(sp_val, imm8)
 }
 
@@ -179,6 +207,9 @@ fn add_sp_imm8(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("ADD SP, 0x{:04X}", imm8), curr_ip);
 
     add_sp_imm8_logless(console, imm8);
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 80
+    console.mcycle();
 }
 
 fn ld_hl_sp_imm8(console: &mut Console, curr_ip: u16) {
@@ -191,6 +222,9 @@ fn ld_hl_sp_imm8(console: &mut Console, curr_ip: u16) {
     console.clear_or_set_flag(carry::add_8((sp_val & 0xFF) as u8, imm8, 0), flag::C);
 
     console.set_r16(reg16::HL, move_ip(sp_val, imm8));
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 44
+    console.mcycle();
 }
 
 fn ld_sp_hl(console: &mut Console, curr_ip: u16) {
@@ -198,6 +232,9 @@ fn ld_sp_hl(console: &mut Console, curr_ip: u16) {
 
     let hl_val: u16 = console.get_r16(reg16::HL);
     console.set_r16(reg16::SP, hl_val);
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 41
+    console.mcycle();
 }
 
 fn di(console: &mut Console, curr_ip: u16) {

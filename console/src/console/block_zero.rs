@@ -37,11 +37,17 @@ fn ld_imm16_sp(console: &mut Console, curr_ip: u16) {
 fn inc_r16(r16: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("INC {}", reg16::reg_to_name(r16)), curr_ip);
     console.set_r16(r16,  console.get_r16(r16).wrapping_add(1));
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 77
+    console.mcycle();
 }
 
 fn dec_r16(r16: u8, console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("INC {}", reg16::reg_to_name(r16)), curr_ip);
     console.set_r16(r16,  console.get_r16(r16).wrapping_sub(1));
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 78
+    console.mcycle();
 }
 
 fn add_hl_r16(r16: u8, console: &mut Console, curr_ip: u16) {
@@ -53,6 +59,9 @@ fn add_hl_r16(r16: u8, console: &mut Console, curr_ip: u16) {
     console.clear_flag(flag::N);
     console.clear_or_set_flag(half_carry::add_16(base, r16_val), flag::H);
     console.clear_or_set_flag(carry::add_16(base, r16_val), flag::C);
+
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 49
+    console.mcycle();
 }
 
 fn inc_r8(r8: u8, console: &mut Console, curr_ip: u16) {
@@ -148,6 +157,8 @@ fn jr_imm8(console: &mut Console, curr_ip: u16) {
     console.call_hook(format!("JR 0x{:04X}", new_ip), curr_ip);
     
     console.set_ip(new_ip);
+    // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 120
+    console.mcycle();
 }
 
 fn jr_cc_imm8(cc: u8, console: &mut Console, curr_ip: u16) {
@@ -158,6 +169,8 @@ fn jr_cc_imm8(cc: u8, console: &mut Console, curr_ip: u16) {
     
     if console.is_condition_met(cc) {
         console.set_ip(new_ip);
+        // https://gekkio.fi/files/gb-docs/gbctr.pdf; Page 121
+        console.mcycle();
     }
 }
 

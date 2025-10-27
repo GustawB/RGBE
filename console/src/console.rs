@@ -121,7 +121,7 @@ impl<'a> Console<'a> {
         self.hookable = Some(h);
     }
 
-    fn mcycle(&mut self) {
+    pub fn mcycle(&mut self) {
         for _ in 0..4 {
             self.clock.lock().unwrap().increment();
         }
