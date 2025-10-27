@@ -41,5 +41,5 @@ def_bitflag_type!(LEFT, 0);
 def_bitflag_type!(RIGHT, 1);
 
 pub trait Hookable {
-    fn hook(&mut self, console: &Console, log: String, addr: u16);
+    fn hook(&mut self, console: &mut Console, log: String, addr: u16);
 }

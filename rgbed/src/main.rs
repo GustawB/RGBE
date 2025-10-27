@@ -40,7 +40,7 @@ impl Debugger {
         }
     }
 
-    pub fn run(&mut self, console: &Console, addr: u16) {
+    pub fn run(&mut self, console: &mut Console, addr: u16) {
         if self.breakpoints.contains_key(&addr) {
             println!("Breakpoint {} at address 0x{:04X} reached",
                     self.breakpoints.get(&addr).unwrap(), addr);
@@ -109,7 +109,7 @@ impl Debugger {
         }
     }
 
-    fn dump_regs(console: &Console) {
+    fn dump_regs(console: &mut Console) {
         println!("REG8 DUMP:");
         for reg in reg8::LIST {
             if reg != reg8::HL_ADDR && reg != reg8::EA {
@@ -126,7 +126,7 @@ impl Debugger {
 }
 
 impl Hookable for Debugger {
-    fn hook(&mut self, console: &Console, log: String, addr: u16) {
+    fn hook(&mut self, console: &mut Console, log: String, addr: u16) {
         let mut file = OpenOptions::new()
                 .write(true)
                 .append(true)
